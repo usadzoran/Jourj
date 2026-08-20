@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { AppView, Category, Business, UserProfile } from './types';
 import { DataService } from './services/dataService';
+import { SplashScreen } from './components/SplashScreen';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { CategoryCard } from './components/CategoryCard';
@@ -22,7 +23,10 @@ import { PWAInstallBanner } from './components/PWAInstallBanner';
 
 export default function App() {
   // Navigation & View States
-  const [currentView, setCurrentView] = useState<AppView>('home');
+  const [currentView, setCurrentView] = useState<AppView>(() => {
+    const hash = window.location.hash.replace(/^#\/?/, '');
+    return hash ? 'home' : 'splash';
+  });
   const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [registrationToken, setRegistrationToken] = useState<string>('');
@@ -145,6 +149,11 @@ export default function App() {
     window.location.hash = `owner/register/${token}`;
   };
 
+  const handleEnterFromSplash = () => {
+    setCurrentView('home');
+    window.location.hash = '';
+  };
+
   // Filter businesses
   const filteredBusinesses = businesses.filter(b => {
     if (!b.active) return false;
@@ -162,12 +171,19 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#121212] text-[#F7F5F0]">
+      {/* 1. SPLASH SCREEN */}
+      {currentView === 'splash' && (
+        <SplashScreen onEnter={handleEnterFromSplash} />
+      )}
+
       {/* Main Navbar */}
-      <Navbar
-        currentView={currentView}
-        currentUser={currentUser}
-        onNavigate={handleNavigate}
-      />
+      {currentView !== 'splash' && (
+        <Navbar
+          currentView={currentView}
+          currentUser={currentUser}
+          onNavigate={handleNavigate}
+        />
+      )}
 
       {/* App Body Content */}
       <main className="flex-1">
@@ -409,10 +425,12 @@ export default function App() {
       </main>
 
       {/* PWA Mobile Install Floating Banner */}
-      <PWAInstallBanner />
+      {currentView !== 'splash' && <PWAInstallBanner />}
 
       {/* Global Footer */}
-      <Footer onNavigate={handleNavigate} />
+      {currentView !== 'splash' && (
+        <Footer onNavigate={handleNavigate} />
+      )}
     </div>
   );
 }
