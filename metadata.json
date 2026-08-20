@@ -1,0 +1,6 @@
+{
+  "name": "jour j",
+  "description": "منصة جزائرية فاخرة متخصصة في خدمات وأماكن الأعراس والحفلات والمناسبات - Le moment qu'on attend",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,26 @@
+{
+  "name": "jour j",
+  "short_name": "jour j",
+  "description": "Le moment qu'on attend - منصة جزائرية متخصصة في خدمات وأماكن الأعراس والمناسبات",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#D4AD54",
+  "orientation": "portrait",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
