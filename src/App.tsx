@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { AppView, Category, Business, UserProfile } from './types';
 import { DataService } from './services/dataService';
-import { SplashScreen } from './components/SplashScreen';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { CategoryCard } from './components/CategoryCard';
@@ -23,7 +22,7 @@ import { PWAInstallBanner } from './components/PWAInstallBanner';
 
 export default function App() {
   // Navigation & View States
-  const [currentView, setCurrentView] = useState<AppView>('splash');
+  const [currentView, setCurrentView] = useState<AppView>('home');
   const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [registrationToken, setRegistrationToken] = useState<string>('');
@@ -98,11 +97,6 @@ export default function App() {
     setBusinesses(bizs);
   };
 
-  const handleEnterFromSplash = () => {
-    setCurrentView('home');
-    window.location.hash = '';
-  };
-
   const handleNavigate = (view: AppView) => {
     setCurrentView(view);
     if (view === 'home') {
@@ -168,19 +162,12 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#121212] text-[#F7F5F0]">
-      {/* 1. SPLASH SCREEN (Shown on initial visit) */}
-      {currentView === 'splash' && (
-        <SplashScreen onEnter={handleEnterFromSplash} />
-      )}
-
       {/* Main Navbar */}
-      {currentView !== 'splash' && (
-        <Navbar
-          currentView={currentView}
-          currentUser={currentUser}
-          onNavigate={handleNavigate}
-        />
-      )}
+      <Navbar
+        currentView={currentView}
+        currentUser={currentUser}
+        onNavigate={handleNavigate}
+      />
 
       {/* App Body Content */}
       <main className="flex-1">
@@ -422,12 +409,10 @@ export default function App() {
       </main>
 
       {/* PWA Mobile Install Floating Banner */}
-      {currentView !== 'splash' && <PWAInstallBanner />}
+      <PWAInstallBanner />
 
       {/* Global Footer */}
-      {currentView !== 'splash' && (
-        <Footer onNavigate={handleNavigate} />
-      )}
+      <Footer onNavigate={handleNavigate} />
     </div>
   );
 }
