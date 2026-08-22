@@ -1,8 +1,10 @@
-export type WeekDay = 'السبت' | 'الأحد' | 'الإثنين' | 'الثلاثاء' | 'الأربعاء' | 'الخميس' | 'الجمعة';
+export type WeekDay = 'Lun' | 'Mar' | 'Mer' | 'Jeu' | 'Ven' | 'Sam' | 'Dim';
+export type AvailabilityStatus = 'disponible' | 'partiel' | 'reserve';
 
 export interface Category {
   id: string;
   name: string;
+  icon?: string;
   description: string;
   image_url: string;
   active: boolean;
@@ -12,6 +14,7 @@ export interface Category {
 export interface Business {
   id: string;
   category_id: string;
+  category_name?: string;
   owner_id?: string | null;
   name: string;
   title: string;
@@ -23,8 +26,12 @@ export interface Business {
   price: number;
   price_unit: string;
   rating: number;
+  reviews_count?: number;
   main_image: string;
+  cover_image?: string;
   active: boolean;
+  morning_hours?: string;
+  afternoon_hours?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -45,6 +52,25 @@ export interface AvailabilityItem {
   available: boolean;
 }
 
+export interface DayAvailability {
+  dayNumber: number;
+  dateStr: string;
+  status: AvailabilityStatus;
+}
+
+export interface BookingRequest {
+  id: string;
+  business_id: string;
+  business_name: string;
+  date: string;
+  time_slot: string;
+  client_name: string;
+  client_phone: string;
+  notes?: string;
+  status: 'en_attente' | 'confirmee';
+  created_at: string;
+}
+
 export interface RegistrationLink {
   id: string;
   business_id: string;
@@ -58,17 +84,21 @@ export interface UserProfile {
   id: string;
   full_name: string;
   phone?: string;
-  email: string;
-  role: 'admin' | 'owner';
+  email?: string;
+  role: 'admin' | 'owner' | 'client';
   created_at?: string;
 }
 
 export type AppView = 
   | 'splash'
   | 'home'
-  | 'category_detail'
   | 'business_detail'
+  | 'favorites'
+  | 'reservations'
+  | 'moi'
   | 'admin'
   | 'owner_login'
   | 'owner_register'
   | 'owner_dashboard';
+
+

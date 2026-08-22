@@ -1,6 +1,6 @@
 {
-  "name": "jour j",
-  "description": "منصة جزائرية فاخرة متخصصة في خدمات وأماكن الأعراس والحفلات والمناسبات - Le moment qu'on attend",
+  "name": "JOUR J",
+  "description": "Plateforme d'excellence pour services et prestataires de mariage et événements à Oran — LE MOMENT QU'ON ATTEND",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

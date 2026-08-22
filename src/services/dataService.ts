@@ -1,179 +1,331 @@
-import { Category, Business, PortfolioItem, AvailabilityItem, RegistrationLink, UserProfile, WeekDay } from '../types';
+import { Category, Business, PortfolioItem, DayAvailability, BookingRequest, UserProfile, RegistrationLink, AvailabilityItem, WeekDay } from '../types';
 import { getSupabase } from '../lib/supabase';
 
-const SEED_CATEGORIES: Category[] = [
+export const ALL_WEEK_DAYS: WeekDay[] = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+
+export const SEED_CATEGORIES: Category[] = [
   {
-    id: 'wedding-halls',
-    name: 'قاعة الأعراس',
-    description: 'أفخم وأرقى قاعات الحفلات والأعراس المصممة لأجمل الليالي بأحدث التجهيزات',
+    id: 'photographe',
+    name: 'Photographe',
+    icon: '📸',
+    description: 'Photographes et vidéastes professionnels pour immortaliser votre grand jour',
+    image_url: 'https://images.unsplash.com/photo-1537633552985-df8429e8048b?auto=format&fit=crop&w=1200&q=80',
+    active: true,
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 'salle',
+    name: 'Salle',
+    icon: '🏛️',
+    description: 'Salles des fêtes et domaines somptueux à Oran pour une réception royale',
     image_url: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1200&q=80',
+    active: true,
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 'costume',
+    name: 'Costume',
+    icon: '🤵',
+    description: 'Costumes de marié, smokings italiens et tenues de cérémonie sur-mesure',
+    image_url: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=1200&q=80',
+    active: true,
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 'voiture',
+    name: 'Voiture',
+    icon: '🚗',
+    description: 'Véhicules de luxe avec chauffeur pour un cortège prestigieux',
+    image_url: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80',
     active: true,
     created_at: new Date().toISOString()
   },
   {
     id: 'traiteur',
     name: 'Traiteur',
-    description: 'أشهى المأكولات الجزائرية والعالمية وبوفيهات الحلويات الراقية للمناسبات',
+    icon: '🍽️',
+    description: 'Gastronomie raffinée, buffets royaux et délices traditionnels et modernes',
     image_url: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&w=1200&q=80',
     active: true,
     created_at: new Date().toISOString()
+  },
+  {
+    id: 'decoration',
+    name: 'Décoration',
+    icon: '🌸',
+    description: 'Scénographies florales féeriques, centres de tables et trônes d\'honneur',
+    image_url: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=1200&q=80',
+    active: true,
+    created_at: new Date().toISOString()
   }
 ];
 
-const SEED_BUSINESSES: Business[] = [
+export const SEED_BUSINESSES: Business[] = [
   {
-    id: 'salle-el-louloua',
-    category_id: 'wedding-halls',
+    id: 'studio-elegance',
+    category_id: 'photographe',
+    category_name: 'Photographe',
     owner_id: null,
-    name: 'قاعة اللؤلؤة',
-    title: 'قاعة اللؤلؤة للأعراس والاحتفالات الفاخرة',
-    description: 'قاعة راقية متكاملة تتسع لأكثر من 500 ضيف، مزودة بأحدث أنظمة الإضاءة الليزرية والصوتية، ديكورات ملكية ذهبية، جناح ملكي مخصص للعروسين، صالة استقبال، ومواقف سيارات واسعة ومحروسة.',
+    name: 'Studio Élégance',
+    title: 'Photographie & Vidéographie Cinématique de Mariage',
+    description: 'Immortalisez chaque émotion de votre union avec une équipe d\'artistes passionnés. Nous réalisons des prises de vue cinématiques 4K, des albums de luxe en cuir italien, ainsi que des séances de couple féeriques en extérieur.',
     phone: '+213 555 12 34 56',
-    email: 'contact@el-louloua-oran.dz',
-    address: 'حي العقيد لطفي، بالقرب من الواجهة البحرية',
-    location: 'وهران، الجزائر',
-    price: 120000,
-    price_unit: 'دج',
+    email: 'contact@studioelegance-oran.dz',
+    address: '12 Rue des Frères Bessol, Akid Lotfi, Oran, Algérie',
+    location: 'Oran',
+    price: 45000,
+    price_unit: 'DA',
     rating: 4.9,
-    main_image: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1200&q=80',
+    reviews_count: 128,
+    main_image: 'https://images.unsplash.com/photo-1537633552985-df8429e8048b?auto=format&fit=crop&w=1200&q=80',
+    cover_image: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1400&q=80',
+    morning_hours: '08:00 — 12:00',
+    afternoon_hours: '14:00 — 19:00',
     active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   },
   {
-    id: 'saveurs-doran',
-    category_id: 'traiteur',
+    id: 'royal-wedding',
+    category_id: 'salle',
+    category_name: 'Salle',
     owner_id: null,
-    name: 'Saveurs d\'Oran Traiteur',
-    title: 'خدمات الإطعام الفاخر والبوفيهات الملكية للأعراس والمناسبات',
-    description: 'نقدم أرقى تشكيلات الأطباق التقليدية الجزائرية الأصيلة (طاجين الزيتون، الشواء الجزائري، الحريرة الوهرانية) بالإضافة إلى بوفيهات مقبلات عصرية، حلويات شرقية وغربية فاخرة، وتنسيق طاولات احترافي.',
-    phone: '+213 661 98 76 54',
-    email: 'traiteur@saveurs-oran.dz',
-    address: 'شارع العربي بن مهيدي، وسط المدينة',
-    location: 'وهران، الجزائر',
-    price: 3500,
-    price_unit: 'دج / شخص',
+    name: 'Royal Wedding',
+    title: 'Salle des Fêtes & Domaine Prestigieux pour Réceptions',
+    description: 'Une somptueuse salle d\'une capacité de 600 convives, dotée de lustres en cristal de Bohême, d\'une suite privative pour les mariés, d\'une acoustique de concert et d\'un parking privé sécurisé au cœur de la baie d\'Oran.',
+    phone: '+213 560 22 44 66',
+    email: 'reservation@royalwedding-oran.dz',
+    address: 'Boulevard Millenium, Canastel, Oran, Algérie',
+    location: 'Oran',
+    price: 180000,
+    price_unit: 'DA',
+    rating: 5.0,
+    reviews_count: 214,
+    main_image: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1200&q=80',
+    cover_image: 'https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?auto=format&fit=crop&w=1400&q=80',
+    morning_hours: '08:00 — 12:00',
+    afternoon_hours: '14:00 — 19:00',
+    active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 'luxury-cars',
+    category_id: 'voiture',
+    category_name: 'Voiture',
+    owner_id: null,
+    name: 'Luxury Cars',
+    title: 'Véhicules de Prestige & Limousines avec Chauffeur Privé',
+    description: 'Faites une entrée inoubliable avec nos berlines de grand luxe (Mercedes Classe S, Porsche Panamera, Range Rover Autobiography). Chauffeur bilingue en costume cravate, décoration florale incluse et service VIP.',
+    phone: '+213 551 77 88 99',
+    email: 'contact@luxurycars-oran.dz',
+    address: 'Front de Mer, Seddikia, Oran, Algérie',
+    location: 'Oran',
+    price: 25000,
+    price_unit: 'DA',
     rating: 4.8,
+    reviews_count: 96,
+    main_image: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80',
+    cover_image: 'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=1400&q=80',
+    morning_hours: '08:00 — 12:00',
+    afternoon_hours: '14:00 — 19:00',
+    active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 'maison-du-traiteur',
+    category_id: 'traiteur',
+    category_name: 'Traiteur',
+    owner_id: null,
+    name: 'Maison du Traiteur',
+    title: 'Haute Gastronomie, Buffets Royaux & Service de Table',
+    description: 'Une expérience culinaire d\'exception alliant la noblesse de la cuisine traditionnelle algérienne aux créations gastronomiques internationales. Service à l\'assiette impérial, cocktails de bienvenue et pyramides de douceurs orientales.',
+    phone: '+213 661 98 76 54',
+    email: 'contact@maison-traiteur.dz',
+    address: '45 Avenue Larbi Ben M\'hidi, Centre-Ville, Oran, Algérie',
+    location: 'Oran',
+    price: 3800,
+    price_unit: 'DA / pers',
+    rating: 4.9,
+    reviews_count: 185,
     main_image: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&w=1200&q=80',
+    cover_image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=1400&q=80',
+    morning_hours: '08:00 — 12:00',
+    afternoon_hours: '14:00 — 19:00',
+    active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 'elegance-homme',
+    category_id: 'costume',
+    category_name: 'Costume',
+    owner_id: null,
+    name: 'Élégance Homme',
+    title: 'Costumes de Marié, Smokings & Haute Couture Italienne',
+    description: 'L\'adresse de référence pour le marié moderne à Oran. Découvrez nos collections exclusives de smokings sur-mesure, costumes 3 pièces en laine vierge et soie, souliers patinés à la main et boutons de manchette précieux.',
+    phone: '+213 770 33 44 55',
+    email: 'boutique@elegancehomme-oran.dz',
+    address: 'Boulevard des Lions, Maraval, Oran, Algérie',
+    location: 'Oran',
+    price: 35000,
+    price_unit: 'DA',
+    rating: 4.9,
+    reviews_count: 82,
+    main_image: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=1200&q=80',
+    cover_image: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1400&q=80',
+    morning_hours: '08:00 — 12:00',
+    afternoon_hours: '14:00 — 19:00',
+    active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 'fleurs-et-merveilles',
+    category_id: 'decoration',
+    category_name: 'Décoration',
+    owner_id: null,
+    name: 'Fleurs & Merveilles',
+    title: 'Scénographie Florale & Conception de Décors Féeriques',
+    description: 'Nous transformons votre lieu de réception en un jardin enchanté. Arches monumentales en fleurs fraîches, allées d\'honneur aux chandelles, centres de tables raffinés et mise en lumière architecturale sur-mesure.',
+    phone: '+213 552 66 11 22',
+    email: 'contact@fleursmerveilles.dz',
+    address: 'Boulevard de l\'USTO, Oran, Algérie',
+    location: 'Oran',
+    price: 50000,
+    price_unit: 'DA',
+    rating: 4.8,
+    reviews_count: 110,
+    main_image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=1200&q=80',
+    cover_image: 'https://images.unsplash.com/photo-1469371670807-013ccf25f16a?auto=format&fit=crop&w=1400&q=80',
+    morning_hours: '08:00 — 12:00',
+    afternoon_hours: '14:00 — 19:00',
     active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   }
 ];
 
-const SEED_PORTFOLIO: PortfolioItem[] = [
-  // قاعة اللؤلؤة
+export const SEED_PORTFOLIO: PortfolioItem[] = [
   {
-    id: 'port-1',
-    business_id: 'salle-el-louloua',
+    id: 'port-p1',
+    business_id: 'studio-elegance',
+    image_url: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1000&q=80',
+    title: 'Séance Couple au Coucher de Soleil',
+    sort_order: 1
+  },
+  {
+    id: 'port-p2',
+    business_id: 'studio-elegance',
+    image_url: 'https://images.unsplash.com/photo-1537633552985-df8429e8048b?auto=format&fit=crop&w=1000&q=80',
+    title: 'Cérémonie & Échange des Alliances',
+    sort_order: 2
+  },
+  {
+    id: 'port-p3',
+    business_id: 'studio-elegance',
+    image_url: 'https://images.unsplash.com/photo-1606800052052-a08af7148866?auto=format&fit=crop&w=1000&q=80',
+    title: 'Détails des Alliances en Or Blanc',
+    sort_order: 3
+  },
+  {
+    id: 'port-p4',
+    business_id: 'studio-elegance',
+    image_url: 'https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=1000&q=80',
+    title: 'Portrait de la Mariée en Robe Blanche',
+    sort_order: 4
+  },
+  {
+    id: 'port-s1',
+    business_id: 'royal-wedding',
     image_url: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1000&q=80',
-    title: 'ديكور القاعة الملكي',
+    title: 'Vue Panoramique de la Grande Salle',
     sort_order: 1
   },
   {
-    id: 'port-2',
-    business_id: 'salle-el-louloua',
+    id: 'port-s2',
+    business_id: 'royal-wedding',
     image_url: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=1000&q=80',
-    title: 'تنسيق الطاولات والورود',
+    title: 'Trône Royal & Décor Doré',
     sort_order: 2
   },
   {
-    id: 'port-3',
-    business_id: 'salle-el-louloua',
-    image_url: 'https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?auto=format&fit=crop&w=1000&q=80',
-    title: 'أعراس وكوشة العروسين',
-    sort_order: 3
-  },
-  {
-    id: 'port-4',
-    business_id: 'salle-el-louloua',
-    image_url: 'https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&w=1000&q=80',
-    title: 'أنظمة الإضاءة الحديثة',
-    sort_order: 4
-  },
-  {
-    id: 'port-5',
-    business_id: 'salle-el-louloua',
-    image_url: 'https://images.unsplash.com/photo-1532712938310-34cb3982ef74?auto=format&fit=crop&w=1000&q=80',
-    title: 'بوفيه الاستقبال والضيافة',
-    sort_order: 5
-  },
-
-  // Saveurs d'Oran Traiteur
-  {
-    id: 'port-6',
-    business_id: 'saveurs-doran',
-    image_url: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&w=1000&q=80',
-    title: 'أطباق رئيسية فاخرة',
+    id: 'port-v1',
+    business_id: 'luxury-cars',
+    image_url: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1000&q=80',
+    title: 'Mercedes Classe S Noire avec Chauffeur',
     sort_order: 1
   },
   {
-    id: 'port-7',
-    business_id: 'saveurs-doran',
-    image_url: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=1000&q=80',
-    title: 'مقبلات وسلطات برستيج',
+    id: 'port-v2',
+    business_id: 'luxury-cars',
+    image_url: 'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=1000&q=80',
+    title: 'Porsche Panamera Cortège Prestige',
     sort_order: 2
   },
   {
-    id: 'port-8',
-    business_id: 'saveurs-doran',
-    image_url: 'https://images.unsplash.com/photo-1587314168485-3236d6710814?auto=format&fit=crop&w=1000&q=80',
-    title: 'حلويات جزائرية وشرقية',
-    sort_order: 3
+    id: 'port-t1',
+    business_id: 'maison-du-traiteur',
+    image_url: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&w=1000&q=80',
+    title: 'Buffet Royal & Entrées Festives',
+    sort_order: 1
   },
   {
-    id: 'port-9',
-    business_id: 'saveurs-doran',
-    image_url: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=1000&q=80',
-    title: 'أطباق فاخرة ولحوم مشوية',
-    sort_order: 4
+    id: 'port-t2',
+    business_id: 'maison-du-traiteur',
+    image_url: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=1000&q=80',
+    title: 'Salades Prestige & Verrines Gourmandes',
+    sort_order: 2
   },
   {
-    id: 'port-10',
-    business_id: 'saveurs-doran',
-    image_url: 'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?auto=format&fit=crop&w=1000&q=80',
-    title: 'بوفيه فواكه وعصائر طازجة',
-    sort_order: 5
+    id: 'port-c1',
+    business_id: 'elegance-homme',
+    image_url: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=1000&q=80',
+    title: 'Smoking Sur-Mesure Col Châle Satiné',
+    sort_order: 1
+  },
+  {
+    id: 'port-d1',
+    business_id: 'fleurs-et-merveilles',
+    image_url: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=1000&q=80',
+    title: 'Arche de Cérémonie en Roses Blanches',
+    sort_order: 1
   }
 ];
 
-export const ALL_WEEK_DAYS: WeekDay[] = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+export const SEED_BOOKINGS: BookingRequest[] = [
+  {
+    id: 'book-1',
+    business_id: 'studio-elegance',
+    business_name: 'Studio Élégance',
+    date: '2026-09-12',
+    time_slot: 'Après-midi (14:00 — 19:00)',
+    client_name: 'Yacine & Amira Benali',
+    client_phone: '+213 550 11 22 33',
+    notes: 'Mariage à Canastel Oran, pack album prestige souhaité.',
+    status: 'confirmee',
+    created_at: new Date(Date.now() - 86400000 * 2).toISOString()
+  }
+];
 
 const SEED_AVAILABILITY: AvailabilityItem[] = [
-  // قاعة اللؤلؤة: All available except Monday
-  { business_id: 'salle-el-louloua', day: 'السبت', available: true },
-  { business_id: 'salle-el-louloua', day: 'الأحد', available: true },
-  { business_id: 'salle-el-louloua', day: 'الإثنين', available: false },
-  { business_id: 'salle-el-louloua', day: 'الثلاثاء', available: true },
-  { business_id: 'salle-el-louloua', day: 'الأربعاء', available: true },
-  { business_id: 'salle-el-louloua', day: 'الخميس', available: true },
-  { business_id: 'salle-el-louloua', day: 'الجمعة', available: true },
-
-  // Saveurs d'Oran: All available
-  { business_id: 'saveurs-doran', day: 'السبت', available: true },
-  { business_id: 'saveurs-doran', day: 'الأحد', available: true },
-  { business_id: 'saveurs-doran', day: 'الإثنين', available: true },
-  { business_id: 'saveurs-doran', day: 'الثلاثاء', available: true },
-  { business_id: 'saveurs-doran', day: 'الأربعاء', available: true },
-  { business_id: 'saveurs-doran', day: 'الخميس', available: true },
-  { business_id: 'saveurs-doran', day: 'الجمعة', available: true },
+  { business_id: 'studio-elegance', day: 'Sam', available: true },
+  { business_id: 'studio-elegance', day: 'Dim', available: true },
+  { business_id: 'studio-elegance', day: 'Lun', available: true },
+  { business_id: 'studio-elegance', day: 'Mar', available: true },
+  { business_id: 'studio-elegance', day: 'Mer', available: true },
+  { business_id: 'studio-elegance', day: 'Jeu', available: true },
+  { business_id: 'studio-elegance', day: 'Ven', available: true },
 ];
 
-const SEED_REGISTRATION_LINKS: RegistrationLink[] = [
+const SEED_REG_LINKS: RegistrationLink[] = [
   {
     id: 'link-1',
-    business_id: 'salle-el-louloua',
-    token: 'ABC123XYZ',
+    business_id: 'studio-elegance',
+    token: 'TOKEN_STUDIO_ELEGANCE_2026',
     used: false,
-    expires_at: new Date(Date.now() + 30 * 86400000).toISOString(),
-    created_at: new Date().toISOString()
-  },
-  {
-    id: 'link-2',
-    business_id: 'saveurs-doran',
-    token: '7Fh82Ks91Lm',
-    used: false,
-    expires_at: new Date(Date.now() + 30 * 86400000).toISOString(),
+    expires_at: new Date(Date.now() + 86400000 * 30).toISOString(),
     created_at: new Date().toISOString()
   }
 ];
@@ -181,26 +333,34 @@ const SEED_REGISTRATION_LINKS: RegistrationLink[] = [
 const SEED_PROFILES: UserProfile[] = [
   {
     id: 'admin-001',
-    full_name: 'مدير منصة jour j',
+    full_name: 'Admin JOUR J',
     email: 'admin@jourj.dz',
     phone: '+213 550 00 00 00',
     role: 'admin',
     created_at: new Date().toISOString()
+  },
+  {
+    id: 'owner-studio-elegance',
+    full_name: 'Karim Boumediene',
+    email: 'contact@studioelegance-oran.dz',
+    phone: '+213 555 12 34 56',
+    role: 'owner',
+    created_at: new Date().toISOString()
   }
 ];
 
-// Local persistence storage keys
 const STORAGE_KEYS = {
-  CATEGORIES: 'jourj_categories_data',
-  BUSINESSES: 'jourj_businesses_data',
-  PORTFOLIO: 'jourj_portfolio_data',
-  AVAILABILITY: 'jourj_availability_data',
-  REG_LINKS: 'jourj_reg_links_data',
-  PROFILES: 'jourj_profiles_data',
-  ACTIVE_USER: 'jourj_active_user',
+  CATEGORIES: 'jourj_categories_v2',
+  BUSINESSES: 'jourj_businesses_v2',
+  PORTFOLIO: 'jourj_portfolio_v2',
+  AVAILABILITY: 'jourj_availability_v2',
+  BOOKINGS: 'jourj_bookings_v2',
+  FAVORITES: 'jourj_favorites_v2',
+  REG_LINKS: 'jourj_reg_links_v2',
+  PROFILES: 'jourj_profiles_v2',
+  ACTIVE_USER: 'jourj_active_user_v2',
 };
 
-// Helper for local data management with fallback initialization
 class LocalSyncStore {
   static get<T>(key: string, seed: T): T {
     try {
@@ -224,77 +384,64 @@ class LocalSyncStore {
   }
 }
 
-// ----------------- DATA SERVICE IMPLEMENTATION -----------------
 export const DataService = {
   // ---- CATEGORIES ----
   async getCategories(): Promise<Category[]> {
     const supabase = getSupabase();
     if (supabase) {
       try {
-        const { data, error } = await supabase
-          .from('categories')
-          .select('*')
-          .order('name');
+        const { data, error } = await supabase.from('categories').select('*').order('name');
         if (!error && data && data.length > 0) {
           LocalSyncStore.set(STORAGE_KEYS.CATEGORIES, data);
           return data;
         }
       } catch (err) {
-        console.warn('Supabase getCategories fallback to local storage:', err);
+        console.warn('Supabase fallback:', err);
       }
     }
     return LocalSyncStore.get<Category[]>(STORAGE_KEYS.CATEGORIES, SEED_CATEGORIES);
   },
 
-  async addCategory(category: Omit<Category, 'created_at'>): Promise<Category> {
+  async addCategory(category: Partial<Category>): Promise<Category> {
     const newCat: Category = {
-      ...category,
+      id: category.id || 'cat-' + Math.random().toString(36).substring(2, 9),
+      name: category.name || '',
+      icon: category.icon || '✨',
+      description: category.description || '',
+      image_url: category.image_url || '',
+      active: category.active !== undefined ? category.active : true,
       created_at: new Date().toISOString()
     };
-
-    const supabase = getSupabase();
-    if (supabase) {
-      try {
-        await supabase.from('categories').insert([newCat]);
-      } catch (err) {
-        console.warn('Supabase addCategory error:', err);
-      }
-    }
-
-    const current = await this.getCategories();
-    const updated = [newCat, ...current];
+    const list = await this.getCategories();
+    const updated = [...list, newCat];
     LocalSyncStore.set(STORAGE_KEYS.CATEGORIES, updated);
     return newCat;
   },
 
-  async updateCategory(category: Category): Promise<Category> {
-    const supabase = getSupabase();
-    if (supabase) {
-      try {
-        await supabase.from('categories').update(category).eq('id', category.id);
-      } catch (err) {
-        console.warn('Supabase updateCategory error:', err);
-      }
+  async updateCategory(idOrCategory: string | Category, updates?: Partial<Category>): Promise<Category | null> {
+    const list = await this.getCategories();
+    let id: string;
+    let up: Partial<Category>;
+
+    if (typeof idOrCategory === 'object') {
+      id = idOrCategory.id;
+      up = idOrCategory;
+    } else {
+      id = idOrCategory;
+      up = updates || {};
     }
 
-    const current = await this.getCategories();
-    const updated = current.map(c => c.id === category.id ? category : c);
-    LocalSyncStore.set(STORAGE_KEYS.CATEGORIES, updated);
-    return category;
+    const index = list.findIndex(c => c.id === id);
+    if (index === -1) return null;
+    const updatedCat = { ...list[index], ...up };
+    list[index] = updatedCat;
+    LocalSyncStore.set(STORAGE_KEYS.CATEGORIES, list);
+    return updatedCat;
   },
 
   async deleteCategory(id: string): Promise<boolean> {
-    const supabase = getSupabase();
-    if (supabase) {
-      try {
-        await supabase.from('categories').delete().eq('id', id);
-      } catch (err) {
-        console.warn('Supabase deleteCategory error:', err);
-      }
-    }
-
-    const current = await this.getCategories();
-    const updated = current.filter(c => c.id !== id);
+    const list = await this.getCategories();
+    const updated = list.filter(c => c.id !== id);
     LocalSyncStore.set(STORAGE_KEYS.CATEGORIES, updated);
     return true;
   },
@@ -304,412 +451,263 @@ export const DataService = {
     const supabase = getSupabase();
     if (supabase) {
       try {
-        const { data, error } = await supabase
-          .from('businesses')
-          .select('*')
-          .order('name');
+        const { data, error } = await supabase.from('businesses').select('*').order('rating', { ascending: false });
         if (!error && data && data.length > 0) {
           LocalSyncStore.set(STORAGE_KEYS.BUSINESSES, data);
           return data;
         }
       } catch (err) {
-        console.warn('Supabase getBusinesses fallback to local storage:', err);
+        console.warn('Supabase fallback:', err);
       }
     }
     return LocalSyncStore.get<Business[]>(STORAGE_KEYS.BUSINESSES, SEED_BUSINESSES);
   },
 
   async getBusinessById(id: string): Promise<Business | null> {
-    const list = await this.getBusinesses();
-    return list.find(b => b.id === id) || null;
+    const businesses = await this.getBusinesses();
+    return businesses.find(b => b.id === id) || null;
   },
 
-  async createBusiness(business: Omit<Business, 'created_at' | 'updated_at'>): Promise<Business> {
+  async createBusiness(business: Partial<Business>): Promise<Business> {
+    const id = business.id || 'biz-' + Math.random().toString(36).substring(2, 9);
     const newBiz: Business = {
-      ...business,
+      id,
+      category_id: business.category_id || 'photographe',
+      category_name: business.category_name,
+      owner_id: business.owner_id || null,
+      name: business.name || 'Nouveau Prestataire',
+      title: business.title || '',
+      description: business.description || '',
+      phone: business.phone || '',
+      email: business.email || '',
+      address: business.address || '',
+      location: business.location || 'Oran',
+      price: business.price || 0,
+      price_unit: business.price_unit || 'DA',
+      rating: business.rating || 5.0,
+      reviews_count: business.reviews_count || 1,
+      main_image: business.main_image || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80',
+      cover_image: business.cover_image || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1400&q=80',
+      active: business.active !== undefined ? business.active : true,
+      morning_hours: business.morning_hours || '08:00 — 12:00',
+      afternoon_hours: business.afternoon_hours || '14:00 — 19:00',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
-
-    const supabase = getSupabase();
-    if (supabase) {
-      try {
-        await supabase.from('businesses').insert([newBiz]);
-      } catch (err) {
-        console.warn('Supabase createBusiness error:', err);
-      }
-    }
-
-    const current = await this.getBusinesses();
-    const updated = [newBiz, ...current];
+    const list = await this.getBusinesses();
+    const updated = [newBiz, ...list];
     LocalSyncStore.set(STORAGE_KEYS.BUSINESSES, updated);
-
-    // Also initialize default availability for all 7 days
-    const days = ALL_WEEK_DAYS.map(day => ({
-      business_id: newBiz.id,
-      day,
-      available: true
-    }));
-    await this.updateAvailability(newBiz.id, days);
-
     return newBiz;
   },
 
-  async updateBusiness(business: Business): Promise<Business> {
-    const updatedBiz: Business = {
-      ...business,
-      updated_at: new Date().toISOString()
-    };
+  async updateBusiness(idOrBusiness: string | Business, updates?: Partial<Business>): Promise<Business | null> {
+    const list = await this.getBusinesses();
+    let id: string;
+    let up: Partial<Business>;
 
-    const supabase = getSupabase();
-    if (supabase) {
-      try {
-        await supabase.from('businesses').update(updatedBiz).eq('id', business.id);
-      } catch (err) {
-        console.warn('Supabase updateBusiness error:', err);
-      }
+    if (typeof idOrBusiness === 'object') {
+      id = idOrBusiness.id;
+      up = idOrBusiness;
+    } else {
+      id = idOrBusiness;
+      up = updates || {};
     }
 
-    const current = await this.getBusinesses();
-    const updated = current.map(b => b.id === business.id ? updatedBiz : b);
-    LocalSyncStore.set(STORAGE_KEYS.BUSINESSES, updated);
+    const index = list.findIndex(b => b.id === id);
+    if (index === -1) return null;
+    const updatedBiz = { ...list[index], ...up, updated_at: new Date().toISOString() };
+    list[index] = updatedBiz;
+    LocalSyncStore.set(STORAGE_KEYS.BUSINESSES, list);
     return updatedBiz;
   },
 
   async deleteBusiness(id: string): Promise<boolean> {
-    const supabase = getSupabase();
-    if (supabase) {
-      try {
-        await supabase.from('businesses').delete().eq('id', id);
-      } catch (err) {
-        console.warn('Supabase deleteBusiness error:', err);
-      }
-    }
-
-    const current = await this.getBusinesses();
-    const updated = current.filter(b => b.id !== id);
+    const list = await this.getBusinesses();
+    const updated = list.filter(b => b.id !== id);
     LocalSyncStore.set(STORAGE_KEYS.BUSINESSES, updated);
     return true;
   },
 
   // ---- PORTFOLIO ----
   async getPortfolio(businessId: string): Promise<PortfolioItem[]> {
-    const supabase = getSupabase();
-    if (supabase) {
-      try {
-        const { data, error } = await supabase
-          .from('portfolio')
-          .select('*')
-          .eq('business_id', businessId)
-          .order('sort_order', { ascending: true });
-        if (!error && data && data.length > 0) {
-          return data;
-        }
-      } catch (err) {
-        console.warn('Supabase getPortfolio error:', err);
-      }
-    }
-
-    const allPortfolio = LocalSyncStore.get<PortfolioItem[]>(STORAGE_KEYS.PORTFOLIO, SEED_PORTFOLIO);
-    return allPortfolio.filter(item => item.business_id === businessId).sort((a, b) => a.sort_order - b.sort_order);
+    const all = LocalSyncStore.get<PortfolioItem[]>(STORAGE_KEYS.PORTFOLIO, SEED_PORTFOLIO);
+    return all.filter(p => p.business_id === businessId).sort((a, b) => a.sort_order - b.sort_order);
   },
 
-  async addPortfolioItem(item: Omit<PortfolioItem, 'id' | 'created_at'>): Promise<PortfolioItem> {
+  async addPortfolioItem(item: Omit<PortfolioItem, 'id' | 'created_at'> | PortfolioItem): Promise<PortfolioItem> {
     const newItem: PortfolioItem = {
       ...item,
-      id: 'port-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+      id: ('id' in item && item.id) ? item.id : 'port-' + Math.random().toString(36).substring(2, 9),
       created_at: new Date().toISOString()
     };
-
-    const supabase = getSupabase();
-    if (supabase) {
-      try {
-        await supabase.from('portfolio').insert([newItem]);
-      } catch (err) {
-        console.warn('Supabase addPortfolioItem error:', err);
-      }
-    }
-
-    const allPortfolio = LocalSyncStore.get<PortfolioItem[]>(STORAGE_KEYS.PORTFOLIO, SEED_PORTFOLIO);
-    allPortfolio.push(newItem);
-    LocalSyncStore.set(STORAGE_KEYS.PORTFOLIO, allPortfolio);
+    const all = LocalSyncStore.get<PortfolioItem[]>(STORAGE_KEYS.PORTFOLIO, SEED_PORTFOLIO);
+    const updated = [...all, newItem];
+    LocalSyncStore.set(STORAGE_KEYS.PORTFOLIO, updated);
     return newItem;
   },
 
   async deletePortfolioItem(id: string): Promise<boolean> {
-    const supabase = getSupabase();
-    if (supabase) {
-      try {
-        await supabase.from('portfolio').delete().eq('id', id);
-      } catch (err) {
-        console.warn('Supabase deletePortfolioItem error:', err);
-      }
-    }
-
-    const allPortfolio = LocalSyncStore.get<PortfolioItem[]>(STORAGE_KEYS.PORTFOLIO, SEED_PORTFOLIO);
-    const updated = allPortfolio.filter(item => item.id !== id);
+    const all = LocalSyncStore.get<PortfolioItem[]>(STORAGE_KEYS.PORTFOLIO, SEED_PORTFOLIO);
+    const updated = all.filter(p => p.id !== id);
     LocalSyncStore.set(STORAGE_KEYS.PORTFOLIO, updated);
     return true;
   },
 
   // ---- AVAILABILITY ----
   async getAvailability(businessId: string): Promise<AvailabilityItem[]> {
-    const supabase = getSupabase();
-    if (supabase) {
-      try {
-        const { data, error } = await supabase
-          .from('availability')
-          .select('*')
-          .eq('business_id', businessId);
-        if (!error && data && data.length > 0) {
-          return data;
-        }
-      } catch (err) {
-        console.warn('Supabase getAvailability error:', err);
-      }
-    }
-
     const all = LocalSyncStore.get<AvailabilityItem[]>(STORAGE_KEYS.AVAILABILITY, SEED_AVAILABILITY);
-    const items = all.filter(a => a.business_id === businessId);
-    
-    // Ensure all 7 days exist
-    if (items.length < 7) {
-      return ALL_WEEK_DAYS.map(day => {
-        const found = items.find(i => i.day === day);
-        return found || { business_id: businessId, day, available: true };
+    return all.filter(a => a.business_id === businessId);
+  },
+
+  async updateAvailability(businessId: string, items: { day: WeekDay; available: boolean }[]): Promise<boolean> {
+    const all = LocalSyncStore.get<AvailabilityItem[]>(STORAGE_KEYS.AVAILABILITY, SEED_AVAILABILITY);
+    const otherBiz = all.filter(a => a.business_id !== businessId);
+    const newItems = items.map(item => ({
+      id: `avail-${businessId}-${item.day}`,
+      business_id: businessId,
+      day: item.day,
+      available: item.available
+    }));
+    LocalSyncStore.set(STORAGE_KEYS.AVAILABILITY, [...otherBiz, ...newItems]);
+    return true;
+  },
+
+  async getMonthlyAvailability(businessId: string, year: number, month: number): Promise<DayAvailability[]> {
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const result: DayAvailability[] = [];
+    const seed = businessId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const dayHash = (day * 7 + seed + (month + 1) * 3) % 10;
+      
+      let status: 'disponible' | 'partiel' | 'reserve';
+      if (dayHash === 3 || dayHash === 7) {
+        status = 'reserve';
+      } else if (dayHash === 1 || dayHash === 6) {
+        status = 'partiel';
+      } else {
+        status = 'disponible';
+      }
+
+      result.push({
+        dayNumber: day,
+        dateStr,
+        status
       });
     }
 
-    return items;
+    return result;
   },
 
-  async updateAvailability(businessId: string, days: AvailabilityItem[]): Promise<AvailabilityItem[]> {
-    const supabase = getSupabase();
-    if (supabase) {
-      try {
-        await supabase.from('availability').upsert(days, { onConflict: 'business_id,day' });
-      } catch (err) {
-        console.warn('Supabase updateAvailability error:', err);
-      }
+  // ---- BOOKINGS ----
+  async getBookings(businessId?: string): Promise<BookingRequest[]> {
+    const all = LocalSyncStore.get<BookingRequest[]>(STORAGE_KEYS.BOOKINGS, SEED_BOOKINGS);
+    if (businessId) {
+      return all.filter(b => b.business_id === businessId);
     }
-
-    const all = LocalSyncStore.get<AvailabilityItem[]>(STORAGE_KEYS.AVAILABILITY, SEED_AVAILABILITY);
-    const filtered = all.filter(a => a.business_id !== businessId);
-    const updated = [...filtered, ...days];
-    LocalSyncStore.set(STORAGE_KEYS.AVAILABILITY, updated);
-    return days;
+    return all;
   },
 
-  // ---- REGISTRATION LINKS & INVITATIONS ----
-  async getRegistrationLinks(): Promise<RegistrationLink[]> {
-    const supabase = getSupabase();
-    if (supabase) {
-      try {
-        const { data, error } = await supabase
-          .from('registration_links')
-          .select('*')
-          .order('created_at', { ascending: false });
-        if (!error && data) {
-          LocalSyncStore.set(STORAGE_KEYS.REG_LINKS, data);
-          return data;
-        }
-      } catch (err) {
-        console.warn('Supabase getRegistrationLinks error:', err);
-      }
-    }
-    return LocalSyncStore.get<RegistrationLink[]>(STORAGE_KEYS.REG_LINKS, SEED_REGISTRATION_LINKS);
-  },
-
-  async createRegistrationLink(businessId: string, expiryDays: number = 30): Promise<RegistrationLink> {
-    // Generate secure random alphanumeric token (e.g. 7Fh82Ks91Lm)
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
-    let token = '';
-    for (let i = 0; i < 11; i++) {
-      token += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-
-    const newLink: RegistrationLink = {
-      id: 'link-' + Date.now(),
-      business_id: businessId,
-      token,
-      used: false,
-      expires_at: new Date(Date.now() + expiryDays * 86400000).toISOString(),
+  async createBooking(booking: Omit<BookingRequest, 'id' | 'created_at' | 'status'>): Promise<BookingRequest> {
+    const newBooking: BookingRequest = {
+      ...booking,
+      id: 'book-' + Math.random().toString(36).substring(2, 9),
+      status: 'en_attente',
       created_at: new Date().toISOString()
     };
 
-    const supabase = getSupabase();
-    if (supabase) {
-      try {
-        await supabase.from('registration_links').insert([newLink]);
-      } catch (err) {
-        console.warn('Supabase createRegistrationLink error:', err);
-      }
-    }
+    const current = LocalSyncStore.get<BookingRequest[]>(STORAGE_KEYS.BOOKINGS, SEED_BOOKINGS);
+    const updated = [newBooking, ...current];
+    LocalSyncStore.set(STORAGE_KEYS.BOOKINGS, updated);
+    return newBooking;
+  },
 
+  // ---- REGISTRATION LINKS ----
+  async getRegistrationLinks(): Promise<RegistrationLink[]> {
+    return LocalSyncStore.get<RegistrationLink[]>(STORAGE_KEYS.REG_LINKS, SEED_REG_LINKS);
+  },
+
+  async createRegistrationLink(businessId: string, customToken?: string): Promise<RegistrationLink> {
+    const token = customToken || ('TOKEN_' + Math.random().toString(36).substring(2, 10).toUpperCase());
+    const link: RegistrationLink = {
+      id: 'link-' + Math.random().toString(36).substring(2, 9),
+      business_id: businessId,
+      token,
+      used: false,
+      expires_at: new Date(Date.now() + 86400000 * 30).toISOString(),
+      created_at: new Date().toISOString()
+    };
     const current = await this.getRegistrationLinks();
-    const updated = [newLink, ...current];
-    LocalSyncStore.set(STORAGE_KEYS.REG_LINKS, updated);
-    return newLink;
+    LocalSyncStore.set(STORAGE_KEYS.REG_LINKS, [link, ...current]);
+    return link;
   },
 
-  async verifyRegistrationToken(token: string): Promise<{ valid: boolean; link?: RegistrationLink; business?: Business; error?: string }> {
+  async verifyRegistrationToken(token: string): Promise<{ valid: boolean; business?: Business; link?: RegistrationLink; error?: string; message?: string }> {
     const links = await this.getRegistrationLinks();
-    const link = links.find(l => l.token.trim().toLowerCase() === token.trim().toLowerCase());
-
-    if (!link) {
-      return { valid: false, error: 'رابط التسجيل غير صالح أو غير موجود' };
-    }
-
-    if (link.used) {
-      return { valid: false, error: 'تم استخدام رابط التسجيل هذا مسبقًا' };
-    }
-
-    if (new Date(link.expires_at).getTime() < Date.now()) {
-      return { valid: false, error: 'انتهت صلاحية رابط التسجيل هذا' };
-    }
-
-    const business = await this.getBusinessById(link.business_id);
-    if (!business) {
-      return { valid: false, error: 'القسم المرتبط بهذا الرابط لم يعد متوفرًا' };
-    }
-
-    return { valid: true, link, business };
+    const link = links.find(l => l.token === token);
+    if (!link) return { valid: false, error: 'Jeton d\'invitation invalide ou expiré.', message: 'Jeton d\'invitation invalide ou expiré.' };
+    if (link.used) return { valid: false, error: 'Ce lien d\'invitation a déjà été utilisé.', message: 'Ce lien d\'invitation a déjà été utilisé.' };
+    const biz = await this.getBusinessById(link.business_id);
+    return { valid: true, business: biz || undefined, link };
   },
 
-  async registerOwnerWithToken(
-    token: string,
-    userData: { fullName: string; phone: string; email: string; password: string }
-  ): Promise<{ success: boolean; user?: UserProfile; business?: Business; error?: string }> {
-    const verification = await this.verifyRegistrationToken(token);
-    if (!verification.valid || !verification.link || !verification.business) {
-      return { success: false, error: verification.error || 'رابط غير صالح' };
-    }
+  async registerOwnerWithToken(token: string, data: { fullName: string; phone: string; email?: string; password?: string }): Promise<{ success: boolean; user?: UserProfile; business?: Business; error?: string; message?: string }> {
+    const verify = await this.verifyRegistrationToken(token);
+    if (!verify.valid || !verify.link) return { success: false, error: verify.error || 'Erreur de vérification', message: verify.message };
 
     const newProfile: UserProfile = {
-      id: 'owner-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
-      full_name: userData.fullName,
-      phone: userData.phone,
-      email: userData.email.toLowerCase().trim(),
+      id: 'owner-' + Math.random().toString(36).substring(2, 9),
+      full_name: data.fullName,
+      phone: data.phone,
+      email: data.email,
       role: 'owner',
       created_at: new Date().toISOString()
     };
 
-    // 1. Try Supabase Auth sign up if configured
-    const supabase = getSupabase();
-    if (supabase) {
-      try {
-        const { data: authData } = await supabase.auth.signUp({
-          email: userData.email,
-          password: userData.password,
-          options: {
-            data: {
-              full_name: userData.fullName,
-              phone: userData.phone,
-              role: 'owner'
-            }
-          }
-        });
-        if (authData.user) {
-          newProfile.id = authData.user.id;
-        }
-        await supabase.from('profiles').insert([newProfile]);
-      } catch (err) {
-        console.warn('Supabase Auth signUp fallback to local:', err);
-      }
+    // Update business owner
+    if (verify.business) {
+      await this.updateBusiness(verify.business.id, { owner_id: newProfile.id });
     }
 
-    // 2. Mark link as used
+    // Mark link as used
     const links = await this.getRegistrationLinks();
     const updatedLinks = links.map(l => l.token === token ? { ...l, used: true } : l);
     LocalSyncStore.set(STORAGE_KEYS.REG_LINKS, updatedLinks);
 
-    // 3. Save profile
+    // Save profile and set active
     const profiles = LocalSyncStore.get<UserProfile[]>(STORAGE_KEYS.PROFILES, SEED_PROFILES);
-    profiles.push(newProfile);
-    LocalSyncStore.set(STORAGE_KEYS.PROFILES, profiles);
-
-    // 4. Bind business to owner
-    const updatedBusiness: Business = {
-      ...verification.business,
-      owner_id: newProfile.id,
-      updated_at: new Date().toISOString()
-    };
-    await this.updateBusiness(updatedBusiness);
-
-    // 5. Set active user session
+    LocalSyncStore.set(STORAGE_KEYS.PROFILES, [...profiles, newProfile]);
     this.setActiveUser(newProfile);
 
-    return {
-      success: true,
-      user: newProfile,
-      business: updatedBusiness
-    };
+    return { success: true, user: newProfile, business: verify.business };
   },
 
-  // ---- PROFILES & AUTHENTICATION ----
-  async getProfiles(): Promise<UserProfile[]> {
-    return LocalSyncStore.get<UserProfile[]>(STORAGE_KEYS.PROFILES, SEED_PROFILES);
+  // ---- FAVORITES ----
+  getFavorites(): string[] {
+    return LocalSyncStore.get<string[]>(STORAGE_KEYS.FAVORITES, ['studio-elegance', 'royal-wedding']);
   },
 
-  async login(email: string, _password?: string): Promise<{ success: boolean; user?: UserProfile; business?: Business; error?: string }> {
-    const cleanEmail = email.toLowerCase().trim();
-
-    // Check if Admin
-    if (cleanEmail === 'admin@jourj.dz' || cleanEmail === 'admin') {
-      const adminUser: UserProfile = {
-        id: 'admin-001',
-        full_name: 'مدير المنصة',
-        email: 'admin@jourj.dz',
-        phone: '+213 550 00 00 00',
-        role: 'admin',
-        created_at: new Date().toISOString()
-      };
-      this.setActiveUser(adminUser);
-      return { success: true, user: adminUser };
+  toggleFavorite(businessId: string): boolean {
+    const favs = this.getFavorites();
+    let updated: string[];
+    let isFav: boolean;
+    if (favs.includes(businessId)) {
+      updated = favs.filter(id => id !== businessId);
+      isFav = false;
+    } else {
+      updated = [...favs, businessId];
+      isFav = true;
     }
-
-    // Check profiles
-    const profiles = await this.getProfiles();
-    let profile = profiles.find(p => p.email.toLowerCase() === cleanEmail);
-
-    if (!profile) {
-      // Demo convenience: allow logging in as owner of salle-el-louloua or saveurs-doran for testing
-      const businesses = await this.getBusinesses();
-      const matchedBiz = businesses.find(b => b.email?.toLowerCase() === cleanEmail);
-      if (matchedBiz) {
-        profile = {
-          id: matchedBiz.owner_id || 'owner-' + matchedBiz.id,
-          full_name: `صاحب ${matchedBiz.name}`,
-          email: cleanEmail,
-          phone: matchedBiz.phone,
-          role: 'owner',
-          created_at: new Date().toISOString()
-        };
-        // Auto-assign owner_id if missing
-        if (!matchedBiz.owner_id) {
-          matchedBiz.owner_id = profile.id;
-          await this.updateBusiness(matchedBiz);
-        }
-      }
-    }
-
-    if (!profile) {
-      return { success: false, error: 'البريد الإلكتروني غير مسجل، أو لم يتم إنشاء حساب من خلال رابط دعوة بعد' };
-    }
-
-    this.setActiveUser(profile);
-
-    // Find business owned by this profile
-    const businesses = await this.getBusinesses();
-    const userBusiness = businesses.find(b => b.owner_id === profile!.id || (profile!.email && b.email?.toLowerCase() === profile!.email.toLowerCase()));
-
-    return {
-      success: true,
-      user: profile,
-      business: userBusiness
-    };
+    LocalSyncStore.set(STORAGE_KEYS.FAVORITES, updated);
+    return isFav;
   },
 
+  isFavorite(businessId: string): boolean {
+    return this.getFavorites().includes(businessId);
+  },
+
+  // ---- AUTHENTICATION / USER PROFILE ----
   getActiveUser(): UserProfile | null {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.ACTIVE_USER);
@@ -727,6 +725,56 @@ export const DataService = {
     }
   },
 
+  async login(emailOrPhone: string, password?: string): Promise<{ success: boolean; user?: UserProfile; business?: Business; error?: string; message?: string }> {
+    const profiles = LocalSyncStore.get<UserProfile[]>(STORAGE_KEYS.PROFILES, SEED_PROFILES);
+    const cleaned = emailOrPhone.trim().toLowerCase();
+    
+    // Check admin
+    if (cleaned.includes('admin') || cleaned === 'admin@jourj.dz') {
+      const admin = profiles.find(p => p.role === 'admin') || SEED_PROFILES[0];
+      this.setActiveUser(admin);
+      return { success: true, user: admin };
+    }
+
+    // Match profile
+    const found = profiles.find(p => 
+      (p.email && p.email.toLowerCase() === cleaned) || 
+      (p.phone && p.phone.replace(/[^0-9]/g, '').includes(cleaned.replace(/[^0-9]/g, '')))
+    );
+
+    if (found) {
+      this.setActiveUser(found);
+      const businesses = await this.getBusinesses();
+      const userBiz = businesses.find(b => b.owner_id === found.id || (found.email && b.email?.toLowerCase() === found.email.toLowerCase()));
+      return { success: true, user: found, business: userBiz };
+    }
+
+    // Auto-create or demo login as client/owner
+    const newProfile: UserProfile = {
+      id: 'user-' + Math.random().toString(36).substring(2, 9),
+      full_name: cleaned.includes('@') ? cleaned.split('@')[0] : 'Client JOUR J',
+      phone: cleaned.includes('@') ? '+213 555 00 00 00' : cleaned,
+      email: cleaned.includes('@') ? cleaned : undefined,
+      role: 'owner',
+      created_at: new Date().toISOString()
+    };
+    this.setActiveUser(newProfile);
+    const businesses = await this.getBusinesses();
+    return { success: true, user: newProfile, business: businesses[0] };
+  },
+
+  async loginSimple(name: string, phone: string): Promise<UserProfile> {
+    const profile: UserProfile = {
+      id: 'client-' + Math.random().toString(36).substring(2, 9),
+      full_name: name,
+      phone: phone,
+      role: 'client',
+      created_at: new Date().toISOString()
+    };
+    this.setActiveUser(profile);
+    return profile;
+  },
+
   logout(): void {
     this.setActiveUser(null);
     const supabase = getSupabase();
@@ -736,30 +784,7 @@ export const DataService = {
   },
 
   // ---- IMAGE STORAGE HELPER ----
-  async uploadImage(file: File, bucket: 'business-images' | 'portfolio' = 'business-images'): Promise<string> {
-    const supabase = getSupabase();
-    if (supabase) {
-      try {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
-        const filePath = `${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from(bucket)
-          .upload(filePath, file);
-
-        if (!uploadError) {
-          const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
-          if (data?.publicUrl) {
-            return data.publicUrl;
-          }
-        }
-      } catch (err) {
-        console.warn('Supabase storage upload error, falling back to data URL:', err);
-      }
-    }
-
-    // Fallback: Read as base64 Data URL so it is fully functional offline & local
+  async uploadImage(file: File, path?: string): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);

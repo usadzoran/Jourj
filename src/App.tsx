@@ -1,38 +1,71 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Sparkles,
-  MapPin,
   Search,
   SlidersHorizontal,
   Building2,
-  CalendarCheck
+  CalendarCheck,
+  Sparkles,
+  ShieldCheck,
+  CheckCircle2,
+  MapPin
 } from 'lucide-react';
 import { AppView, Category, Business, UserProfile } from './types';
 import { DataService } from './services/dataService';
 import { SplashScreen } from './components/SplashScreen';
 import { Navbar } from './components/Navbar';
-import { Footer } from './components/Footer';
-import { CategoryCard } from './components/CategoryCard';
+import { DrawerMenu } from './components/DrawerMenu';
+import { CategoryScroll } from './components/CategoryScroll';
+import { HeroSection } from './components/HeroSection';
 import { BusinessCard } from './components/BusinessCard';
 import { BusinessDetailView } from './components/BusinessDetailView';
+import { BottomNav } from './components/BottomNav';
+import { LoginModal } from './components/LoginModal';
+import { QuickConciergeModal } from './components/QuickConciergeModal';
+import { FavoritesView } from './components/FavoritesView';
+import { MyBookingsView } from './components/MyBookingsView';
+import { ProfileView } from './components/ProfileView';
 import { AdminDashboard } from './components/AdminDashboard';
 import { OwnerLoginView } from './components/OwnerLoginView';
 import { OwnerRegisterView } from './components/OwnerRegisterView';
 import { OwnerDashboard } from './components/OwnerDashboard';
-import { PWAInstallBanner } from './components/PWAInstallBanner';
+import { Footer } from './components/Footer';
 
 export default function App() {
   // Navigation & View States
   const [currentView, setCurrentView] = useState<AppView>(() => {
     const hash = window.location.hash.replace(/^#\/?/, '');
-    return hash ? 'home' : 'splash';
+    if (hash) {
+      if (hash.startsWith('business/')) return 'business_detail';
+      if (hash === 'favorites') return 'favorites';
+      if (hash === 'reservations') return 'reservations';
+      if (hash === 'moi') return 'moi';
+      if (hash === 'admin') return 'admin';
+      if (hash.startsWith('owner/register/')) return 'owner_register';
+      if (hash.startsWith('owner')) return 'owner_login';
+      return 'home';
+    }
+    return 'splash';
   });
-  const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
+
+  const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(() => {
+    const hash = window.location.hash.replace(/^#\/?/, '');
+    if (hash.startsWith('business/')) {
+      return hash.replace('business/', '');
+    }
+    return null;
+  });
+
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [registrationToken, setRegistrationToken] = useState<string>('');
 
-  // Authentication
+  // Modals & Drawer
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isConciergeModalOpen, setIsConciergeModalOpen] = useState(false);
+
+  // Authentication & Favorites
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [favorites, setFavorites] = useState<string[]>([]);
 
   // Data
   const [categories, setCategories] = useState<Category[]>([]);
@@ -42,15 +75,21 @@ export default function App() {
 
   // Initial routing and hash parser
   useEffect(() => {
-    // Check local session
+    // Check local user session
     const activeUser = DataService.getActiveUser();
     if (activeUser) {
       setCurrentUser(activeUser);
     }
+    setFavorites(DataService.getFavorites());
 
-    // Parse URL Hash for direct link support (e.g. #owner/register/ABC123XYZ or #admin)
+    // Parse URL Hash
     const handleHash = () => {
       const hash = window.location.hash.replace(/^#\/?/, '');
+      if (!hash) {
+        // Keep current view or home
+        return;
+      }
+
       if (hash.startsWith('owner/register/')) {
         const token = hash.replace('owner/register/', '');
         if (token) {
@@ -71,6 +110,14 @@ export default function App() {
         const id = hash.replace('business/', '');
         setSelectedBusinessId(id);
         setCurrentView('business_detail');
+      } else if (hash === 'favorites') {
+        setCurrentView('favorites');
+      } else if (hash === 'reservations') {
+        setCurrentView('reservations');
+      } else if (hash === 'moi') {
+        setCurrentView('moi');
+      } else if (hash === 'home') {
+        setCurrentView('home');
       }
     };
 
@@ -99,6 +146,7 @@ export default function App() {
     const bizs = await DataService.getBusinesses();
     setCategories(cats);
     setBusinesses(bizs);
+    setFavorites(DataService.getFavorites());
   };
 
   const handleNavigate = (view: AppView) => {
@@ -106,7 +154,13 @@ export default function App() {
     if (view === 'home') {
       setSelectedCategoryId(null);
       setSelectedBusinessId(null);
-      window.location.hash = '';
+      window.location.hash = 'home';
+    } else if (view === 'favorites') {
+      window.location.hash = 'favorites';
+    } else if (view === 'reservations') {
+      window.location.hash = 'reservations';
+    } else if (view === 'moi') {
+      window.location.hash = 'moi';
     } else if (view === 'admin') {
       window.location.hash = 'admin';
     } else if (view === 'owner_login') {
@@ -114,25 +168,38 @@ export default function App() {
     } else if (view === 'owner_dashboard') {
       window.location.hash = 'owner/dashboard';
     }
-    window.scrollTo(0, 0);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleEnterFromSplash = () => {
+    setCurrentView('home');
+    window.location.hash = 'home';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSelectBusiness = (businessId: string) => {
     setSelectedBusinessId(businessId);
     setCurrentView('business_detail');
     window.location.hash = `business/${businessId}`;
-    window.scrollTo(0, 0);
   };
 
-  const handleSelectCategory = (categoryId: string) => {
-    setSelectedCategoryId(categoryId);
-    window.scrollTo(0, 0);
+  const handleToggleFavorite = (bizId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    DataService.toggleFavorite(bizId);
+    setFavorites(DataService.getFavorites());
   };
 
   const handleOwnerAuthSuccess = (user: UserProfile) => {
     setCurrentUser(user);
+    DataService.setActiveUser(user);
     setCurrentView('owner_dashboard');
     window.location.hash = 'owner/dashboard';
+    refreshData();
+  };
+
+  const handleLoginSuccess = (user: UserProfile) => {
+    setCurrentUser(user);
+    DataService.setActiveUser(user);
     refreshData();
   };
 
@@ -140,7 +207,7 @@ export default function App() {
     DataService.logout();
     setCurrentUser(null);
     setCurrentView('home');
-    window.location.hash = '';
+    window.location.hash = 'home';
   };
 
   const handleNavigateToTokenRegister = (token: string) => {
@@ -149,245 +216,242 @@ export default function App() {
     window.location.hash = `owner/register/${token}`;
   };
 
-  const handleEnterFromSplash = () => {
-    setCurrentView('home');
-    window.location.hash = '';
-  };
-
-  // Filter businesses
-  const filteredBusinesses = businesses.filter(b => {
+  // Filter businesses by Category and Search
+  const filteredBusinesses = businesses.filter((b) => {
     if (!b.active) return false;
-    if (selectedCategoryId && b.category_id !== selectedCategoryId) return false;
+    if (selectedCategoryId && b.category_id !== selectedCategoryId) {
+      return false;
+    }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       const nameMatch = b.name.toLowerCase().includes(q);
       const titleMatch = (b.title || '').toLowerCase().includes(q);
-      const locMatch = (b.location || '').toLowerCase().includes(q);
+      const descMatch = (b.description || '').toLowerCase().includes(q);
+      const locMatch = (b.location || '').toLowerCase().includes(q) || (b.address || '').toLowerCase().includes(q);
       const catMatch = (categories.find(c => c.id === b.category_id)?.name || '').toLowerCase().includes(q);
-      return nameMatch || titleMatch || locMatch || catMatch;
+      return nameMatch || titleMatch || descMatch || locMatch || catMatch;
     }
     return true;
   });
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#121212] text-[#F7F5F0]">
-      {/* 1. SPLASH SCREEN */}
+    <div className="min-h-screen flex flex-col bg-[#080808] text-[#F7F3EA] selection:bg-[#D7B45A] selection:text-[#080808]">
+      
+      {/* 1. SPLASH SCREEN (Accès Initial) */}
       {currentView === 'splash' && (
         <SplashScreen onEnter={handleEnterFromSplash} />
       )}
 
-      {/* Main Navbar */}
+      {/* 2. TOP NAVBAR & DRAWER */}
       {currentView !== 'splash' && (
-        <Navbar
-          currentView={currentView}
-          currentUser={currentUser}
-          onNavigate={handleNavigate}
-        />
+        <>
+          <Navbar
+            currentView={currentView}
+            currentUser={currentUser}
+            onOpenDrawer={() => setIsDrawerOpen(true)}
+            onOpenLogin={() => setIsLoginModalOpen(true)}
+            onNavigate={handleNavigate}
+          />
+
+          <DrawerMenu
+            isOpen={isDrawerOpen}
+            onClose={() => setIsDrawerOpen(false)}
+            currentUser={currentUser}
+            onNavigate={handleNavigate}
+            onOpenLogin={() => setIsLoginModalOpen(true)}
+            onLogout={handleLogout}
+          />
+        </>
       )}
 
-      {/* App Body Content */}
+      {/* 3. APP BODY */}
       <main className="flex-1">
-        {/* 2. PUBLIC VISITOR HOME VIEW */}
+        
+        {/* PUBLIC VISITOR HOME VIEW */}
         {currentView === 'home' && (
-          <div className="max-w-6xl mx-auto px-4 py-8 space-y-10">
-            {/* Hero Section */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-[#1E1B14] via-[#171717] to-[#141414] border border-[#D4AD54]/40 p-6 md:p-10 shadow-2xl text-center">
-              <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-80 h-80 bg-[#D4AD54]/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="pb-28">
+            
+            {/* Category Scroll Bar (Horizontal Smooth Scroll) */}
+            <CategoryScroll
+              categories={categories}
+              selectedCategoryId={selectedCategoryId}
+              onSelectCategory={setSelectedCategoryId}
+            />
 
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#121212]/80 border border-[#D4AD54]/40 text-xs font-semibold text-[#D4AD54] mb-4 backdrop-blur-sm">
-                <MapPin className="w-3.5 h-3.5 text-[#D4AD54]" />
-                <span>الجزائر • وهران (Oran)</span>
-              </div>
+            {/* Hero Section Banner */}
+            <HeroSection />
 
-              <h1 className="font-luxury text-3xl md:text-5xl font-extrabold text-[#FFFFFF] tracking-tight">
-                اكتشف الأقسام
-              </h1>
-
-              <p className="font-luxury text-base md:text-xl text-[#E5C378] mt-2 italic">
-                اختر المكان المناسب ليومك المميز
-              </p>
-
-              <p className="text-xs md:text-sm text-[#A3A3A3] mt-2 max-w-lg mx-auto leading-relaxed">
-                دليلك المباشر لحجز أفخم قاعات الأعراس وبوفيهات الـTraiteur الملكية بدون وسيط وبدون تسجيل
-              </p>
-
-              {/* Search & Filter Bar */}
-              <div className="mt-6 max-w-md mx-auto relative">
+            {/* Main Content Area */}
+            <div className="max-w-4xl mx-auto px-4 pt-4 space-y-6">
+              
+              {/* Search Bar */}
+              <div className="relative">
                 <input
                   id="home-search-input"
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="ابحث عن قاعة، طعام Traiteur، أو عنوان..."
-                  className="w-full rounded-2xl bg-[#121212] border border-[#333333] focus:border-[#D4AD54] px-4 py-3.5 pr-11 text-sm text-[#F7F5F0] outline-none shadow-inner transition-colors"
+                  placeholder="Rechercher une salle, photographe, traiteur à Oran..."
+                  className="w-full rounded-2xl bg-[#151515] border border-[#262626] focus:border-[#D7B45A] px-4 py-3.5 pl-11 text-xs text-[#F7F3EA] outline-none shadow-inner transition-colors placeholder:text-[#666666]"
                 />
-                <Search className="absolute right-4 top-4 w-4 h-4 text-[#737373]" />
+                <Search className="absolute left-4 top-3.5 w-4 h-4 text-[#777777]" />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery('')}
-                    className="absolute left-3.5 top-3.5 text-xs text-[#737373] hover:text-[#D4AD54]"
+                    className="absolute right-4 top-3.5 text-xs text-[#888888] hover:text-[#D7B45A]"
                   >
-                    مسح
+                    Effacer
                   </button>
                 )}
               </div>
-            </div>
 
-            {/* Section 1: Categories Cards (الأقسام) */}
-            <div>
-              <div className="flex items-center justify-between mb-5">
+              {/* Title Row: "Services populaires" & "Oran" */}
+              <div className="flex items-center justify-between pt-2">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-[#D4AD54]" />
-                  <h2 className="font-luxury text-2xl font-bold text-[#FFFFFF]">
-                    الأقسام الرئيسية
+                  <Sparkles className="w-4 h-4 text-[#D7B45A]" />
+                  <h2 className="font-luxury text-lg sm:text-xl font-bold tracking-wide text-[#F7F3EA] uppercase">
+                    Services populaires
                   </h2>
                 </div>
 
-                {selectedCategoryId && (
-                  <button
-                    onClick={() => setSelectedCategoryId(null)}
-                    className="text-xs text-[#D4AD54] hover:underline"
-                  >
-                    عرض جميع الأقسام
-                  </button>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                {categories
-                  .filter(c => c.active)
-                  .map((cat) => {
-                    const count = businesses.filter(b => b.category_id === cat.id && b.active).length;
-                    const rating = cat.id === 'wedding-halls' ? 4.9 : 4.8;
-
-                    return (
-                      <CategoryCard
-                        key={cat.id}
-                        category={cat}
-                        rating={rating}
-                        count={count}
-                        onClick={() => handleSelectCategory(cat.id)}
-                      />
-                    );
-                  })}
-              </div>
-            </div>
-
-            {/* Section 2: Venues & Services (الأماكن والخدمات) */}
-            <div className="pt-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
-                <div>
-                  <h3 className="font-luxury text-2xl font-bold text-[#FFFFFF]">
-                    {selectedCategoryId
-                      ? categories.find(c => c.id === selectedCategoryId)?.name
-                      : 'أفضل الأماكن والخدمات في وهران'}
-                  </h3>
-                  <p className="text-xs text-[#A3A3A3] mt-1">
-                    {filteredBusinesses.length} خيارات متوفرة للحجز المباشر
-                  </p>
-                </div>
-
-                {/* Filter Pills */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-                  <button
-                    onClick={() => setSelectedCategoryId(null)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                      selectedCategoryId === null
-                        ? 'bg-[#D4AD54] text-[#121212]'
-                        : 'bg-[#1C1C1C] text-[#A3A3A3] hover:text-[#FFFFFF]'
-                    }`}
-                  >
-                    الكل ({businesses.filter(b => b.active).length})
-                  </button>
-
-                  {categories.map(cat => (
-                    <button
-                      key={cat.id}
-                      onClick={() => setSelectedCategoryId(cat.id)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                        selectedCategoryId === cat.id
-                          ? 'bg-[#D4AD54] text-[#121212]'
-                          : 'bg-[#1C1C1C] text-[#A3A3A3] hover:text-[#FFFFFF]'
-                      }`}
-                    >
-                      {cat.name}
-                    </button>
-                  ))}
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#151515] border border-[#2A2A2A] text-xs font-semibold text-[#D7B45A]">
+                  <MapPin className="w-3 h-3 text-[#D7B45A]" />
+                  <span>Oran</span>
                 </div>
               </div>
 
+              {/* Business Cards Grid */}
               {loading ? (
-                <div className="text-center py-12 text-[#D4AD54]">
-                  <div className="w-8 h-8 border-2 border-[#D4AD54] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                  <span className="text-xs text-[#A3A3A3]">جاري تحميل الخدمات...</span>
+                <div className="text-center py-16 text-[#D7B45A]">
+                  <div className="w-8 h-8 border-2 border-[#D7B45A] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                  <span className="text-xs text-[#999999]">Chargement des prestataires...</span>
                 </div>
               ) : filteredBusinesses.length === 0 ? (
-                <div className="rounded-2xl bg-[#1A1A1A] p-10 border border-[#2A2A2A] text-center">
-                  <SlidersHorizontal className="w-10 h-10 text-[#525252] mx-auto mb-2" />
-                  <h4 className="font-bold text-sm text-[#FFFFFF]">لا توجد نتائج مطابقة</h4>
-                  <p className="text-xs text-[#737373] mt-1">
-                    جرب البحث بكلمات أخرى أو اختر قسمًا مختلفًا.
+                <div className="rounded-3xl bg-[#151515] p-10 border border-[#222222] text-center space-y-3">
+                  <SlidersHorizontal className="w-10 h-10 text-[#555555] mx-auto" />
+                  <h4 className="font-luxury font-bold text-base text-[#F7F3EA]">
+                    Aucun prestataire trouvé
+                  </h4>
+                  <p className="text-xs text-[#888888] max-w-xs mx-auto">
+                    Essayez d'autres mots-clés ou réinitialisez les filtres par catégorie.
                   </p>
                   <button
                     onClick={() => {
                       setSearchQuery('');
                       setSelectedCategoryId(null);
                     }}
-                    className="mt-3 px-4 py-1.5 rounded-xl bg-[#262626] text-xs text-[#D4AD54]"
+                    className="px-5 py-2 rounded-xl bg-[#222222] text-xs font-semibold text-[#D7B45A] hover:bg-[#2A2A2A]"
                   >
-                    إعادة ضبط الفلاتر
+                    Réinitialiser les filtres
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 md:gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   {filteredBusinesses.map((biz) => (
                     <BusinessCard
                       key={biz.id}
                       business={biz}
-                      categoryName={categories.find(c => c.id === biz.category_id)?.name}
+                      isFavorite={favorites.includes(biz.id)}
+                      onToggleFavorite={(e) => handleToggleFavorite(biz.id, e)}
                       onClick={() => handleSelectBusiness(biz.id)}
                     />
                   ))}
                 </div>
               )}
-            </div>
 
-            {/* Trust & Guarantee Banner */}
-            <div className="rounded-2xl bg-[#171717] p-6 border border-[#262626] grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-              <div className="p-3">
-                <Building2 className="w-6 h-6 text-[#D4AD54] mx-auto mb-2" />
-                <h4 className="font-bold text-sm text-[#FFFFFF]">أماكن موثوقة ومعتمدة</h4>
-                <p className="text-[11px] text-[#737373] mt-1">
-                  معاينة دقيقة للصالات وتجهيزات البوفيه الفاخرة
-                </p>
+              {/* Trust & Prestige Banner */}
+              <div className="rounded-3xl bg-[#121212] p-6 border border-[#222222] grid grid-cols-1 sm:grid-cols-3 gap-4 text-center mt-8">
+                <div className="p-3">
+                  <ShieldCheck className="w-6 h-6 text-[#D7B45A] mx-auto mb-2" />
+                  <h4 className="font-luxury font-bold text-xs sm:text-sm text-[#F7F3EA]">
+                    Prestataires Certifiés
+                  </h4>
+                  <p className="text-[11px] text-[#777777] mt-1">
+                    Sélection rigoureuse des meilleurs professionnels d'Oran.
+                  </p>
+                </div>
+
+                <div className="p-3 border-y sm:border-y-0 sm:border-x border-[#222222]">
+                  <CalendarCheck className="w-6 h-6 text-[#D7B45A] mx-auto mb-2" />
+                  <h4 className="font-luxury font-bold text-xs sm:text-sm text-[#F7F3EA]">
+                    Contact & Réservation Directe
+                  </h4>
+                  <p className="text-[11px] text-[#777777] mt-1">
+                    Appel, WhatsApp et calendrier en temps réel sans intermédiaire.
+                  </p>
+                </div>
+
+                <div className="p-3">
+                  <Sparkles className="w-6 h-6 text-[#D7B45A] mx-auto mb-2" />
+                  <h4 className="font-luxury font-bold text-xs sm:text-sm text-[#F7F3EA]">
+                    Tarifs Transparents
+                  </h4>
+                  <p className="text-[11px] text-[#777777] mt-1">
+                    Prix clairs et forfaits adaptés en Dinars Algériens (DA).
+                  </p>
+                </div>
               </div>
-              <div className="p-3 border-y sm:border-y-0 sm:border-x border-[#262626]">
-                <CalendarCheck className="w-6 h-6 text-[#D4AD54] mx-auto mb-2" />
-                <h4 className="font-bold text-sm text-[#FFFFFF]">تواصل وحجز مباشر</h4>
-                <p className="text-[11px] text-[#737373] mt-1">
-                  اتصال وواتساب مع صاحب المكان بدون رسوم وسيط
-                </p>
-              </div>
-              <div className="p-3">
-                <Sparkles className="w-6 h-6 text-[#D4AD54] mx-auto mb-2" />
-                <h4 className="font-bold text-sm text-[#FFFFFF]">أسعار واضحة بالدينار</h4>
-                <p className="text-[11px] text-[#737373] mt-1">
-                  شفافية كاملة في الأسعار والوحدات (DZD)
-                </p>
-              </div>
+
             </div>
           </div>
         )}
 
-        {/* 3. BUSINESS DETAIL VIEW */}
+        {/* BUSINESS DETAIL VIEW */}
         {currentView === 'business_detail' && selectedBusinessId && (
           <BusinessDetailView
             businessId={selectedBusinessId}
             onBack={() => handleNavigate('home')}
+            onSelectBusiness={handleSelectBusiness}
           />
         )}
 
-        {/* 4. ADMIN DASHBOARD */}
+        {/* FAVORITES VIEW */}
+        {currentView === 'favorites' && (
+          <FavoritesView
+            onBack={() => handleNavigate('home')}
+            onSelectBusiness={handleSelectBusiness}
+          />
+        )}
+
+        {/* MY BOOKINGS VIEW */}
+        {currentView === 'reservations' && (
+          <MyBookingsView
+            onBack={() => handleNavigate('home')}
+            onSelectBusiness={handleSelectBusiness}
+          />
+        )}
+
+        {/* PROFILE / MON ESPACE VIEW */}
+        {currentView === 'moi' && (
+          currentUser ? (
+            <ProfileView
+              user={currentUser}
+              onNavigate={handleNavigate}
+              onLogout={handleLogout}
+              onBack={() => handleNavigate('home')}
+            />
+          ) : (
+            <div className="max-w-md mx-auto px-4 py-16 text-center space-y-4">
+              <div className="w-16 h-16 rounded-full bg-[#151515] border border-[#D7B45A]/40 flex items-center justify-center text-[#D7B45A] mx-auto">
+                <Sparkles className="w-8 h-8" />
+              </div>
+              <h2 className="font-luxury text-xl font-bold text-[#F7F3EA]">
+                Mon Espace Mariage
+              </h2>
+              <p className="text-xs text-[#999999]">
+                Connectez-vous pour retrouver vos réservations et vos prestataires enregistrés.
+              </p>
+              <button
+                onClick={() => setIsLoginModalOpen(true)}
+                className="px-8 py-3.5 rounded-2xl bg-gradient-to-r from-[#D7B45A] via-[#F0D38A] to-[#C89443] text-[#080808] font-luxury font-bold text-xs uppercase"
+              >
+                Se connecter
+              </button>
+            </div>
+          )
+        )}
+
+        {/* ADMIN DASHBOARD */}
         {currentView === 'admin' && (
           <AdminDashboard
             user={currentUser}
@@ -397,7 +461,7 @@ export default function App() {
           />
         )}
 
-        {/* 5. OWNER REGISTRATION VIEW (via Token invitation) */}
+        {/* OWNER REGISTRATION VIEW */}
         {currentView === 'owner_register' && (
           <OwnerRegisterView
             token={registrationToken}
@@ -406,7 +470,7 @@ export default function App() {
           />
         )}
 
-        {/* 6. OWNER LOGIN VIEW */}
+        {/* OWNER LOGIN VIEW */}
         {currentView === 'owner_login' && (
           <OwnerLoginView
             onSuccess={handleOwnerAuthSuccess}
@@ -414,7 +478,7 @@ export default function App() {
           />
         )}
 
-        {/* 7. OWNER DASHBOARD */}
+        {/* OWNER DASHBOARD */}
         {currentView === 'owner_dashboard' && currentUser && (
           <OwnerDashboard
             user={currentUser}
@@ -422,15 +486,37 @@ export default function App() {
             onLogout={handleLogout}
           />
         )}
+
       </main>
 
-      {/* PWA Mobile Install Floating Banner */}
-      {currentView !== 'splash' && <PWAInstallBanner />}
+      {/* 4. FIXED BOTTOM NAVIGATION BAR */}
+      {currentView !== 'splash' && currentView !== 'business_detail' && (
+        <BottomNav
+          currentView={currentView}
+          currentUser={currentUser}
+          onNavigate={handleNavigate}
+          onOpenConcierge={() => setIsConciergeModalOpen(true)}
+          onOpenLogin={() => setIsLoginModalOpen(true)}
+        />
+      )}
 
-      {/* Global Footer */}
+      {/* 5. GLOBAL FOOTER */}
       {currentView !== 'splash' && (
         <Footer onNavigate={handleNavigate} />
       )}
+
+      {/* 6. MODALS */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onSuccess={handleLoginSuccess}
+      />
+
+      <QuickConciergeModal
+        isOpen={isConciergeModalOpen}
+        onClose={() => setIsConciergeModalOpen(false)}
+      />
+
     </div>
   );
 }

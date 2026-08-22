@@ -1,108 +1,76 @@
 import React from 'react';
-import { Sparkles, Shield, UserCheck } from 'lucide-react';
+import { Menu, User, Heart, Crown } from 'lucide-react';
 import { UserProfile, AppView } from '../types';
 
 interface NavbarProps {
   currentView: AppView;
   currentUser: UserProfile | null;
+  onOpenDrawer: () => void;
+  onOpenLogin: () => void;
   onNavigate: (view: AppView) => void;
-  onSelectCategory?: (categoryId: string) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   currentView,
   currentUser,
+  onOpenDrawer,
+  onOpenLogin,
   onNavigate
 }) => {
   return (
-    <header className="sticky top-0 z-40 w-full bg-[#121212]/90 backdrop-blur-md border-b border-[#262626] transition-colors">
-      <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+    <header className="sticky top-0 z-40 w-full bg-[#080808]/95 backdrop-blur-md border-b border-[#1A1A1A] transition-colors">
+      <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
         
-        {/* Brand Logo & Slogan */}
-        <div
-          id="navbar-brand-logo"
-          onClick={() => onNavigate('home')}
-          className="flex items-center gap-3 cursor-pointer group select-none"
+        {/* Left: ☰ Menu Drawer Button */}
+        <button
+          id="navbar-menu-drawer-btn"
+          onClick={onOpenDrawer}
+          className="w-10 h-10 rounded-2xl bg-[#151515] border border-[#222222] flex items-center justify-center text-[#F7F3EA] hover:text-[#D7B45A] hover:border-[#D7B45A]/40 active:scale-95 transition-all shadow-sm"
+          aria-label="Ouvrir le menu"
         >
-          <div className="w-10 h-10 rounded-full border border-[#D4AD54]/50 flex items-center justify-center bg-gradient-to-b from-[#1C1C1C] to-[#121212] shadow-sm group-hover:border-[#D4AD54] transition-colors">
-            <span className="font-luxury text-lg font-bold text-[#D4AD54] italic">
-              J
-            </span>
+          <Menu className="w-5 h-5" />
+        </button>
+
+        {/* Center: Brand Title & Subtitle */}
+        <div
+          id="navbar-brand-center"
+          onClick={() => onNavigate('home')}
+          className="flex flex-col items-center cursor-pointer select-none group"
+        >
+          <div className="flex items-center gap-1.5">
+            <Crown className="w-3.5 h-3.5 text-[#D7B45A] group-hover:rotate-12 transition-transform" />
+            <h1 className="font-luxury text-xl md:text-2xl font-bold tracking-[0.15em] text-[#F7F3EA] uppercase group-hover:text-[#D7B45A] transition-colors">
+              JOUR <span className="text-[#D7B45A]">J</span>
+            </h1>
           </div>
-          
-          <div className="flex flex-col">
-            <div className="flex items-center gap-1.5">
-              <span className="font-luxury text-xl font-bold tracking-tight text-[#FFFFFF] group-hover:text-[#D4AD54] transition-colors">
-                jour <span className="text-[#D4AD54]">j</span>
-              </span>
-              <span className="text-[10px] uppercase tracking-wider text-[#D4AD54] bg-[#D4AD54]/10 border border-[#D4AD54]/20 px-1.5 py-0.5 rounded">
-                وهران
-              </span>
-            </div>
-            <span className="font-luxury text-[10px] text-[#A3A3A3] italic tracking-wider -mt-0.5">
-              Le moment qu'on attend
-            </span>
-          </div>
+          <span className="font-luxury text-[9px] md:text-[10px] tracking-[0.25em] text-[#D7B45A] uppercase -mt-0.5">
+            LE MOMENT QU'ON ATTEND
+          </span>
         </div>
 
-        {/* Right Navigation & Subtle Partner Portals */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Public Visitors Navigation */}
-          <button
-            onClick={() => onNavigate('home')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
-              currentView === 'home'
-                ? 'bg-[#D4AD54]/15 text-[#D4AD54] border border-[#D4AD54]/30'
-                : 'text-[#D4D4D4] hover:text-[#FFFFFF]'
-            }`}
-          >
-            الرئيسية
-          </button>
-
-          {/* If Logged in as Owner */}
-          {currentUser?.role === 'owner' && (
+        {/* Right: User / Login Button (◉ Moi) */}
+        <div className="flex items-center gap-2">
+          {currentUser ? (
             <button
-              onClick={() => onNavigate('owner_dashboard')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-                currentView === 'owner_dashboard'
-                  ? 'bg-[#D4AD54] text-[#121212]'
-                  : 'bg-[#262626] text-[#E5C378] hover:bg-[#333333]'
-              }`}
+              id="navbar-user-profile-btn"
+              onClick={() => onNavigate('moi')}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-[#151515] border border-[#D7B45A]/40 text-xs font-semibold text-[#D7B45A] hover:bg-[#1C1C1C] transition-all"
             >
-              <UserCheck className="w-3.5 h-3.5" />
-              <span>لوحة قسمي</span>
+              <div className="w-5 h-5 rounded-full bg-[#D7B45A] text-[#080808] flex items-center justify-center text-[10px] font-bold">
+                {currentUser.full_name.charAt(0).toUpperCase()}
+              </div>
+              <span className="hidden sm:inline">{currentUser.full_name.split(' ')[0]}</span>
             </button>
-          )}
-
-          {/* If Logged in as Admin */}
-          {currentUser?.role === 'admin' && (
+          ) : (
             <button
-              onClick={() => onNavigate('admin')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-                currentView === 'admin'
-                  ? 'bg-[#D4AD54] text-[#121212]'
-                  : 'bg-[#262626] text-[#E5C378] hover:bg-[#333333]'
-              }`}
+              id="navbar-login-btn"
+              onClick={onOpenLogin}
+              className="w-10 h-10 rounded-2xl bg-[#151515] border border-[#222222] flex items-center justify-center text-[#F7F3EA] hover:text-[#D7B45A] hover:border-[#D7B45A]/40 active:scale-95 transition-all shadow-sm"
+              aria-label="Mon compte"
+              title="Se connecter"
             >
-              <Shield className="w-3.5 h-3.5" />
-              <span>لوحة الإدارة</span>
+              <User className="w-5 h-5" />
             </button>
-          )}
-
-          {/* Discreet Access to Owner Login if not logged in (Kept subtle for general visitors) */}
-          {!currentUser && currentView !== 'owner_login' && currentView !== 'admin' && (
-            <div className="flex items-center gap-1">
-              <button
-                id="navbar-owner-login-btn"
-                onClick={() => onNavigate('owner_login')}
-                className="flex items-center gap-1 text-[11px] font-medium text-[#A3A3A3] hover:text-[#D4AD54] px-2 py-1 rounded-lg transition-colors border border-transparent hover:border-[#333333]"
-                title="بوابة دخول أصحاب القاعات والخدمات"
-              >
-                <Sparkles className="w-3 h-3 text-[#D4AD54]" />
-                <span className="hidden sm:inline">أصحاب الأقسام</span>
-                <span className="sm:hidden">دخول</span>
-              </button>
-            </div>
           )}
         </div>
 
