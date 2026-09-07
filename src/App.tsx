@@ -1,118 +1,284 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { api } from './services/api';
+import { Category, Business, RegistrationLink, Profile, PortfolioItem, Availability } from './types';
+import { Header } from './components/Header';
+import { VisitorHome } from './components/VisitorHome';
+import { CategoryView } from './components/CategoryView';
+import { BusinessDetailView } from './components/BusinessDetailView';
+import { RegistrationView } from './components/RegistrationView';
+import { AdminDashboard } from './components/AdminDashboard';
+import { OwnerDashboard } from './components/OwnerDashboard';
+import { LoginModal } from './components/LoginModal';
+
+type ViewType = 'home' | 'category' | 'business' | 'register' | 'admin' | 'owner';
 
 export default function App() {
-  const [entered, setEntered] = useState(false);
+  // Navigation & Routing state
+  const [currentView, setCurrentView] = useState<ViewType>('home');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
+  const [registrationToken, setRegistrationToken] = useState<string | null>(null);
+
+  // Data states
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [businesses, setBusinesses] = useState<Business[]>([]);
+  const [registrationLinks, setRegistrationLinks] = useState<RegistrationLink[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Business detail specific data
+  const [businessPortfolio, setBusinessPortfolio] = useState<PortfolioItem[]>([]);
+  const [businessAvailability, setBusinessAvailability] = useState<Availability[]>([]);
+
+  // User session state
+  const [currentUser, setCurrentUser] = useState<Profile | null>(null);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
+  // Refresh and load all data
+  const loadInitialData = async () => {
+    try {
+      const [cats, bizs, links, profs] = await Promise.all([
+        api.getCategories(false),
+        api.adminGetBusinesses(),
+        api.adminGetRegistrationLinks(),
+        api.getProfiles()
+      ]);
+      setCategories(cats);
+      setBusinesses(bizs);
+      setRegistrationLinks(links);
+      setProfiles(profs);
+    } catch (err) {
+      console.error('Error loading data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadInitialData();
+
+    // Check URL parameters for ?token=...
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    if (token) {
+      setRegistrationToken(token);
+      setCurrentView('register');
+    }
+  }, []);
+
+  // When a business is selected, load its dedicated portfolio and availability
+  useEffect(() => {
+    if (selectedBusinessId) {
+      api.getPortfolio(selectedBusinessId).then(setBusinessPortfolio);
+      api.getAvailability(selectedBusinessId).then(setBusinessAvailability);
+    }
+  }, [selectedBusinessId]);
+
+  // Navigation handlers
+  const handleNavigate = (view: string, param?: string) => {
+    if (view === 'home') {
+      setSelectedCategoryId(null);
+      setSelectedBusinessId(null);
+      setCurrentView('home');
+      // clean url query if any
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (view === 'category' && param) {
+      setSelectedCategoryId(param);
+      setSelectedBusinessId(null);
+      setCurrentView('category');
+    } else if (view === 'business' && param) {
+      setSelectedBusinessId(param);
+      setCurrentView('business');
+    } else if (view === 'admin') {
+      setCurrentView('admin');
+    } else if (view === 'owner') {
+      setCurrentView('owner');
+    } else if (view === 'register') {
+      if (param) setRegistrationToken(param);
+      setCurrentView('register');
+    }
+  };
+
+  const handleSelectCategory = (categoryId: string) => {
+    setSelectedCategoryId(categoryId);
+    setSelectedBusinessId(null);
+    setCurrentView('category');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSelectBusiness = (businessId: string) => {
+    setSelectedBusinessId(businessId);
+    setCurrentView('business');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleRegistrationSuccess = (profile: Profile, business: Business) => {
+    setCurrentUser(profile);
+    setSelectedBusinessId(business.id);
+    setSelectedCategoryId(business.category_id);
+    // Reload data so business appears everywhere
+    loadInitialData();
+    // Direct owner to their dedicated dashboard
+    setCurrentView('owner');
+    window.history.replaceState({}, '', window.location.pathname);
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setCurrentView('home');
+  };
+
+  // Active Category & Business resolution
+  const activeCategory = categories.find(c => c.id === selectedCategoryId) || null;
+  const activeBusiness = businesses.find(b => b.id === selectedBusinessId) || null;
 
   return (
-    <div className="min-h-screen bg-[#080808] text-[#F7F3EA] flex flex-col items-center justify-between relative overflow-hidden selection:bg-[#D7B45A] selection:text-[#080808]">
-      {/* Background ambient luxury lighting */}
+    <div className="min-h-screen bg-[#080808] text-[#F7F3EA] flex flex-col justify-between selection:bg-[#D7B45A] selection:text-[#080808]">
+      {/* Ambient Luxury Lighting */}
       <div 
-        className="absolute -top-40 left-1/2 -translate-x-1/2 w-[520px] h-[520px] rounded-full pointer-events-none blur-[120px] opacity-40"
+        className="fixed -top-40 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full pointer-events-none blur-[140px] opacity-25 z-0"
         style={{
           background: 'radial-gradient(circle, rgba(215, 180, 90, 0.45) 0%, rgba(138, 107, 39, 0.2) 50%, transparent 80%)'
         }}
       />
-      <div 
-        className="absolute -bottom-40 left-1/2 -translate-x-1/2 w-[480px] h-[480px] rounded-full pointer-events-none blur-[140px] opacity-30"
-        style={{
-          background: 'radial-gradient(circle, rgba(240, 211, 138, 0.3) 0%, rgba(200, 148, 67, 0.15) 50%, transparent 80%)'
-        }}
+
+      {/* Global Header */}
+      <Header
+        currentView={currentView}
+        onNavigate={handleNavigate}
+        currentUser={currentUser}
+        onLogout={handleLogout}
+        onOpenLogin={() => setIsLoginModalOpen(true)}
       />
 
-      {/* Top subtle badge */}
-      <header className="w-full pt-8 pb-4 flex justify-center z-10">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#161616]/80 border border-[#D7B45A]/25 backdrop-blur-md shadow-lg shadow-black/40">
-          <span className="text-[#D7B45A] text-xs">✦</span>
-          <span className="text-[11px] tracking-[0.25em] uppercase text-[#D7B45A] font-medium">
-            Plateforme Officielle
-          </span>
-          <span className="text-[#D7B45A] text-xs">✦</span>
-        </div>
-      </header>
-
-      {/* Main Content: Logo & Presentation */}
-      <main className="w-full max-w-md px-6 py-6 flex flex-col items-center justify-center text-center z-10 my-auto">
-        {!entered ? (
-          <div className="flex flex-col items-center w-full">
-            {/* Logo Display Container */}
-            <div className="relative group mb-8">
-              {/* Outer Golden Glow Ring */}
-              <div className="absolute -inset-2 rounded-3xl bg-gradient-to-r from-[#D7B45A]/30 via-[#F0D38A]/40 to-[#D7B45A]/30 blur-xl opacity-70 group-hover:opacity-100 transition-opacity duration-700" />
-              
-              {/* Card Container holding the official logo */}
-              <div className="relative w-72 sm:w-80 aspect-square rounded-3xl overflow-hidden border border-[#D7B45A]/40 bg-[#121212] shadow-[0_20px_50px_rgba(0,0,0,0.8)] p-2 backdrop-blur-sm">
-                <img
-                  src="./assets/logo.jpg"
-                  alt="Jour J — Le moment qu'on attend pour être heureux"
-                  className="w-full h-full object-contain rounded-2xl transition-transform duration-500 group-hover:scale-[1.02]"
-                  onError={(e) => {
-                    // Fallback to src image path if public not ready
-                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=85';
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Typography & Subtitle */}
-            <div className="space-y-3 mb-10">
-              <h1 className="text-3xl sm:text-4xl font-serif font-normal tracking-[0.18em] text-[#F7F3EA] uppercase">
-                JOUR <span className="shimmer-text font-semibold">J</span>
-              </h1>
-              
-              <div className="flex items-center justify-center gap-3">
-                <div className="h-[1px] w-8 bg-gradient-to-r from-transparent to-[#D7B45A]/60" />
-                <span className="text-xs text-[#D7B45A]">♡</span>
-                <div className="h-[1px] w-8 bg-gradient-to-l from-transparent to-[#D7B45A]/60" />
-              </div>
-
-              <p className="text-[11px] sm:text-xs tracking-[0.28em] text-[#D7B45A] font-medium uppercase leading-relaxed">
-                LE MOMENT QU'ON ATTEND<br />
-                <span className="text-[#A3A3A3] text-[10px] tracking-[0.22em]">POUR ÊTRE HEUREUX</span>
-              </p>
-            </div>
-
-            {/* Enter Button */}
-            <button
-              id="btn-enter"
-              onClick={() => setEntered(true)}
-              className="gold-button w-full sm:w-72 py-4 px-8 rounded-full text-[#111111] font-bold text-sm tracking-[0.22em] uppercase flex items-center justify-center gap-3 cursor-pointer group"
-            >
-              <span>ENTRER</span>
-              <span className="text-base transition-transform duration-300 group-hover:translate-x-1">
-                →
-              </span>
-            </button>
+      {/* Main Content Area */}
+      <main className="flex-1 relative z-10 w-full pb-12">
+        {loading ? (
+          <div className="py-24 text-center space-y-4">
+            <div className="w-12 h-12 rounded-full border-2 border-[#D7B45A] border-t-transparent animate-spin mx-auto" />
+            <p className="text-xs text-[#888]">جارٍ تحميل منصة JOUR J...</p>
           </div>
         ) : (
-          /* Transition state after clicking Entrer */
-          <div className="flex flex-col items-center w-full py-8 space-y-6 animate-fadeIn">
-            <div className="w-20 h-20 rounded-full border border-[#D7B45A] bg-[#141414] flex items-center justify-center shadow-[0_0_30px_rgba(215,180,90,0.3)]">
-              <span className="text-2xl text-[#D7B45A]">♛</span>
-            </div>
-            
-            <div className="space-y-2">
-              <h2 className="text-2xl font-serif text-[#F0D38A]">Bienvenue sur Jour J</h2>
-              <p className="text-xs text-[#A3A3A3] max-w-xs leading-relaxed">
-                الصفحة الأولى جاهزة بنجاح. ما هي العناصر أو الأقسام التي تود إضافتها في الخطوة التالية؟
-              </p>
-            </div>
+          <>
+            {/* VIEW 1: VISITOR HOME */}
+            {currentView === 'home' && (
+              <VisitorHome
+                categories={categories.filter(c => c.active)}
+                businesses={businesses}
+                onSelectCategory={handleSelectCategory}
+                onOpenTokenPrompt={() => setIsLoginModalOpen(true)}
+              />
+            )}
 
-            <button
-              onClick={() => setEntered(false)}
-              className="px-6 py-2.5 rounded-full border border-[#D7B45A]/40 bg-[#161616] text-xs text-[#D7B45A] hover:bg-[#D7B45A] hover:text-[#111] transition-colors"
-            >
-              ← العودة إلى البداية
-            </button>
-          </div>
+            {/* VIEW 2: CATEGORY VIEW (Businesses inside this category) */}
+            {currentView === 'category' && activeCategory && (
+              <CategoryView
+                category={activeCategory}
+                allCategories={categories.filter(c => c.active)}
+                businesses={businesses}
+                onSelectCategory={handleSelectCategory}
+                onSelectBusiness={handleSelectBusiness}
+                onBackToHome={() => handleNavigate('home')}
+              />
+            )}
+
+            {/* VIEW 3: SINGLE BUSINESS DETAILS */}
+            {currentView === 'business' && activeBusiness && (
+              <BusinessDetailView
+                business={activeBusiness}
+                category={categories.find(c => c.id === activeBusiness.category_id) || null}
+                portfolio={businessPortfolio}
+                availability={businessAvailability}
+                onBackToCategory={() => {
+                  if (activeBusiness.category_id) {
+                    handleSelectCategory(activeBusiness.category_id);
+                  } else {
+                    handleNavigate('home');
+                  }
+                }}
+              />
+            )}
+
+            {/* VIEW 4: REGISTRATION VIEW VIA TOKEN */}
+            {currentView === 'register' && registrationToken && (
+              <RegistrationView
+                token={registrationToken}
+                onSuccess={handleRegistrationSuccess}
+                onCancel={() => handleNavigate('home')}
+              />
+            )}
+
+            {/* VIEW 5: ADMIN DASHBOARD */}
+            {currentView === 'admin' && (
+              <AdminDashboard
+                categories={categories}
+                businesses={businesses}
+                registrationLinks={registrationLinks}
+                profiles={profiles}
+                onRefreshData={loadInitialData}
+                onTestRegisterLink={(token) => {
+                  setRegistrationToken(token);
+                  setCurrentView('register');
+                }}
+              />
+            )}
+
+            {/* VIEW 6: OWNER DASHBOARD */}
+            {currentView === 'owner' && currentUser && (
+              <OwnerDashboard
+                currentUser={currentUser}
+                onPreviewBusiness={(bizId) => handleSelectBusiness(bizId)}
+                onRefreshData={loadInitialData}
+              />
+            )}
+          </>
         )}
       </main>
 
-      {/* Footer / Location indicator */}
-      <footer className="w-full pb-6 pt-2 text-center z-10">
-        <p className="text-[10px] tracking-[0.2em] text-[#666666] uppercase">
-          Oran, Algérie · Événements & Mariages d'Exception
-        </p>
+      {/* Global Footer */}
+      <footer className="w-full border-t border-[#1a1a1a] bg-[#0c0c0c] py-6 px-4 text-center relative z-10">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="font-serif font-bold text-sm text-[#F7F3EA] uppercase tracking-widest">
+              JOUR <span className="text-[#D7B45A]">J</span>
+            </span>
+            <span className="text-[10px] text-[#D7B45A]">♡</span>
+            <span className="text-[11px] text-[#777]">LE MOMENT QU'ON ATTEND</span>
+          </div>
+
+          <p className="text-[11px] text-[#666]">
+            وهران، الجزائر · منصة تنظيم الأعراس والمناسبات الفاخرة
+          </p>
+
+          <div className="flex items-center gap-3 text-xs text-[#888]">
+            <button
+              onClick={() => setIsLoginModalOpen(true)}
+              className="text-[#D7B45A] hover:underline"
+            >
+              دخول المشرفين والملاك ⚙️
+            </button>
+          </div>
+        </div>
       </footer>
+
+      {/* Login & Token Modal */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        profiles={profiles}
+        onSelectUser={(profile) => {
+          setCurrentUser(profile);
+          if (profile.role === 'admin') {
+            setCurrentView('admin');
+          } else {
+            setCurrentView('owner');
+          }
+        }}
+        onEnterToken={(token) => {
+          setRegistrationToken(token);
+          setCurrentView('register');
+        }}
+      />
     </div>
   );
 }
