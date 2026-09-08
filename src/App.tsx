@@ -314,6 +314,9 @@ export default function App() {
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
         profiles={profiles}
+        businesses={businesses}
+        categories={categories}
+        registrationLinks={registrationLinks}
         onSelectUser={(profile) => {
           setCurrentUser(profile);
           if (profile.role === 'admin') {
