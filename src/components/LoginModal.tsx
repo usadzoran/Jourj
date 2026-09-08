@@ -23,8 +23,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   onSelectUser,
   onEnterToken
 }) => {
-  // Tabs: 'link' (Special admin link / token), 'credentials' (Email/Password), 'quick' (Demo quick access)
-  const [activeTab, setActiveTab] = useState<'link' | 'credentials' | 'quick'>('link');
+  // Tabs: 'link' (Special admin link / token), 'credentials' (Email/Password)
+  const [activeTab, setActiveTab] = useState<'link' | 'credentials'>('link');
 
   // Link / Token form state
   const [inputLinkOrToken, setInputLinkOrToken] = useState('');
@@ -143,9 +143,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     onClose();
   };
 
-  const adminProfiles = profiles.filter(p => p.role === 'admin');
-  const ownerProfiles = profiles.filter(p => p.role === 'owner');
-
   return (
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
       <div className="w-full max-w-lg rounded-3xl border border-[#D7B45A]/30 bg-[#141414] p-6 sm:p-8 space-y-6 shadow-2xl relative text-right">
@@ -196,19 +193,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           >
             <span>🔐</span>
             <span>حساب مسجل</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('quick')}
-            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-              activeTab === 'quick'
-                ? 'bg-[#222] text-[#D7B45A] border border-[#D7B45A]/30'
-                : 'text-[#888] hover:text-[#bbb]'
-            }`}
-          >
-            <span>⚡</span>
-            <span>دخول تجريبي</span>
           </button>
         </div>
 
@@ -323,68 +307,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               دخول إلى لوحة التحكم ♛
             </button>
           </form>
-        )}
-
-        {/* TAB 3: QUICK DEMO ACCOUNTS */}
-        {activeTab === 'quick' && (
-          <div className="space-y-4 max-h-[320px] overflow-y-auto pr-1">
-            {/* Admin Profile */}
-            <div className="space-y-2">
-              <span className="text-[11px] font-bold text-[#D7B45A]">الإدارة العامة (Super Admin):</span>
-              {adminProfiles.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => {
-                    onSelectUser(p);
-                    onClose();
-                  }}
-                  className="w-full p-3 rounded-xl bg-[#1e1e1e] hover:bg-[#252525] border border-[#333] flex items-center justify-between text-right transition-all group cursor-pointer"
-                >
-                  <div>
-                    <div className="text-xs font-bold text-[#F7F3EA] group-hover:text-[#D7B45A]">
-                      {p.full_name}
-                    </div>
-                    <div className="text-[10px] text-[#777]">{p.email}</div>
-                  </div>
-                  <span className="px-2.5 py-1 rounded-md bg-[#D7B45A]/20 text-[#D7B45A] text-[10px] font-bold">
-                    Super Admin ♛
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            {/* Owner Profiles */}
-            <div className="space-y-2 pt-2 border-t border-[#222]">
-              <span className="text-[11px] font-bold text-[#D7B45A]">أصحاب المؤسسات المسجلين في الأقسام:</span>
-              {ownerProfiles.map((p) => {
-                const biz = businesses.find(b => b.owner_id === p.id);
-                const cat = biz ? categories.find(c => c.id === biz.category_id) : null;
-
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => {
-                      onSelectUser(p);
-                      onClose();
-                    }}
-                    className="w-full p-3 rounded-xl bg-[#1a1a1a] hover:bg-[#222] border border-[#2a2a2a] flex items-center justify-between text-right transition-all group cursor-pointer"
-                  >
-                    <div>
-                      <div className="text-xs font-bold text-[#F7F3EA] group-hover:text-[#D7B45A]">
-                        {p.full_name}
-                      </div>
-                      <div className="text-[10px] text-[#777]">
-                        {biz?.name || p.email} {cat ? `(${cat.name})` : ''}
-                      </div>
-                    </div>
-                    <span className="px-2.5 py-1 rounded-md bg-[#252525] text-[#aaa] text-[10px] font-medium border border-[#333]">
-                      {cat?.name || 'مالك مؤسسة'} 🏛️
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
         )}
       </div>
     </div>
