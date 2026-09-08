@@ -4,12 +4,12 @@ import path from 'path';
 import {defineConfig} from 'vite';
 
 export default defineConfig(({ command }) => {
-  // Base configuration for GitHub Pages: https://usadzoran.github.io/Jourj/
-  // - In development server ('serve'), use '/'
-  // - In production builds for GitHub Pages, base is '/Jourj/' matching repository name
-  // - Can be overridden by VITE_BASE environment variable
+  // Relative base './' ensures assets load correctly in all hosting environments:
+  // - AI Studio preview (https://ais-dev-...run.app/)
+  // - Production shared preview (https://ais-pre-...run.app/)
+  // - GitHub Pages subpath (https://usadzoran.github.io/Jourj/)
   const isDev = command === 'serve';
-  const base = process.env.VITE_BASE || (isDev ? '/' : '/Jourj/');
+  const base = process.env.VITE_BASE || (isDev ? '/' : './');
 
   return {
     base,
