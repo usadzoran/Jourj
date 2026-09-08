@@ -4,10 +4,13 @@ import path from 'path';
 import {defineConfig} from 'vite';
 
 export default defineConfig(({ command }) => {
-  // Development server serves from root '/'
-  // Production builds target GitHub Pages repository 'Jourj': https://usadzoran.github.io/Jourj/
+  // Base configuration:
+  // - When VITE_BASE is specified (such as in .github/workflows/deploy.yml: VITE_BASE=/Jourj/), use that.
+  // - In development server ('serve'), use '/'.
+  // - In standard production deployments (Cloud Run, shared URL, root domain, custom hosting),
+  //   use './' so all assets load relative to index.html with zero 404 errors.
   const isDev = command === 'serve';
-  const base = process.env.VITE_BASE || (isDev ? '/' : '/Jourj/');
+  const base = process.env.VITE_BASE || (isDev ? '/' : (process.env.GITHUB_ACTIONS ? '/Jourj/' : './'));
 
   return {
     base,
