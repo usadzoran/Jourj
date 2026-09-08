@@ -4,21 +4,30 @@ import App from './App.tsx';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import './index.css';
 
-// Ensure complete removal of any legacy service workers and stale PWA caches
+// Ensure complete removal of any legacy service workers and stale PWA caches safely
 if (typeof window !== 'undefined') {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations().then((registrations) => {
-      for (const registration of registrations) {
-        registration.unregister().catch(() => {});
-      }
-    }).catch(() => {});
+  try {
+    if ('serviceWorker' in navigator && navigator.serviceWorker) {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (const registration of registrations) {
+          registration.unregister().catch(() => {});
+        }
+      }).catch(() => {});
+    }
+  } catch {
+    // Ignored in sandboxed/restricted iframe environments
   }
-  if ('caches' in window) {
-    caches.keys().then((keys) => {
-      for (const key of keys) {
-        caches.delete(key).catch(() => {});
-      }
-    }).catch(() => {});
+
+  try {
+    if ('caches' in window && window.caches) {
+      window.caches.keys().then((keys) => {
+        for (const key of keys) {
+          window.caches.delete(key).catch(() => {});
+        }
+      }).catch(() => {});
+    }
+  } catch {
+    // Ignored in sandboxed/restricted iframe environments
   }
 }
 

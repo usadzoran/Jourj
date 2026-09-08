@@ -49,7 +49,23 @@
     </style>
   </head>
   <body class="bg-[#080808] text-[#F7F3EA] antialiased selection:bg-[#D7B45A] selection:text-[#080808]">
-    <div id="root"></div>
+    <div id="root">
+      <div style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #080808; color: #F7F3EA; font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif; text-align: center; padding: 24px;">
+        <div style="width: 56px; height: 56px; border-radius: 50%; border: 1px solid rgba(215, 180, 90, 0.6); background-color: #141414; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; box-shadow: 0 0 30px rgba(215, 180, 90, 0.25);">
+          <span style="color: #D7B45A; font-size: 24px; font-weight: bold; font-family: 'Playfair Display', Georgia, serif;">J</span>
+        </div>
+        <div style="font-size: 22px; font-family: 'Playfair Display', Georgia, serif; font-weight: bold; letter-spacing: 3px; margin-bottom: 6px;">
+          JOUR <span style="color: #D7B45A;">J</span>
+        </div>
+        <div style="font-size: 11px; color: #888888; letter-spacing: 1.5px; margin-bottom: 24px; text-transform: uppercase;">
+          LE MOMENT QU'ON ATTEND · ORAN
+        </div>
+        <div style="width: 32px; height: 32px; border: 2.5px solid rgba(215, 180, 90, 0.25); border-top-color: #D7B45A; border-radius: 50%; animation: jourjSpin 0.8s linear infinite;"></div>
+      </div>
+      <style>
+        @keyframes jourjSpin { to { transform: rotate(360deg); } }
+      </style>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

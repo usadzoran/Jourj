@@ -57,6 +57,11 @@ export default function App() {
   useEffect(() => {
     loadInitialData();
 
+    // Safety timeout: Ensure page content reveals within 1.2s even on slow or restricted networks
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+    }, 1200);
+
     // Subscribe to real-time updates across the platform (Supabase Realtime + Cross-Tab sync)
     const unsubscribe = api.subscribeToRealtime((payload) => {
       console.log('⚡ Realtime event received in App:', payload);
@@ -64,14 +69,21 @@ export default function App() {
     });
 
     // Check URL parameters for ?token=...
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
-    if (token) {
-      setRegistrationToken(token);
-      setCurrentView('register');
+    try {
+      if (typeof window !== 'undefined' && window.location) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        if (token) {
+          setRegistrationToken(token);
+          setCurrentView('register');
+        }
+      }
+    } catch {
+      // ignore
     }
 
     return () => {
+      clearTimeout(safetyTimer);
       unsubscribe();
     };
   }, []);

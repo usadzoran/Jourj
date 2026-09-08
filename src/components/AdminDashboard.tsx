@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { api } from '../services/api';
 import { Category, Business, RegistrationLink, Profile } from '../types';
-import { isSupabaseConfigured, setSupabaseConfig, clearSupabaseConfig } from '../lib/supabase';
+import { isSupabaseConfigured, setSupabaseConfig, clearSupabaseConfig, safeGetStorage } from '../lib/supabase';
 
 interface AdminDashboardProps {
   categories: Category[];
@@ -24,11 +24,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   // Database Tab State
   const [supabaseUrlInput, setSupabaseUrlInput] = useState(() => {
-    return (typeof window !== 'undefined' && localStorage.getItem('JOURJ_SUPABASE_URL')) || 
+    return safeGetStorage('JOURJ_SUPABASE_URL') || 
            ((import.meta as any).env?.VITE_SUPABASE_URL || '');
   });
   const [supabaseKeyInput, setSupabaseKeyInput] = useState(() => {
-    return (typeof window !== 'undefined' && localStorage.getItem('JOURJ_SUPABASE_ANON_KEY')) || 
+    return safeGetStorage('JOURJ_SUPABASE_ANON_KEY') || 
            ((import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '');
   });
   const [dbTestResult, setDbTestResult] = useState<{ success: boolean; message: string; latencyMs?: number } | null>(null);

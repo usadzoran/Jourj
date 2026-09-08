@@ -4,6 +4,37 @@ const env = typeof import.meta !== 'undefined' && 'env' in import.meta
   ? (import.meta as { env?: Record<string, string> }).env 
   : undefined;
 
+export function safeGetStorage(key: string): string | null {
+  try {
+    if (typeof window !== 'undefined' && 'localStorage' in window && window.localStorage) {
+      return window.localStorage.getItem(key);
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+export function safeSetStorage(key: string, val: string): void {
+  try {
+    if (typeof window !== 'undefined' && 'localStorage' in window && window.localStorage) {
+      window.localStorage.setItem(key, val);
+    }
+  } catch {
+    // ignore
+  }
+}
+
+export function safeRemoveStorage(key: string): void {
+  try {
+    if (typeof window !== 'undefined' && 'localStorage' in window && window.localStorage) {
+      window.localStorage.removeItem(key);
+    }
+  } catch {
+    // ignore
+  }
+}
+
 function getInitialConfig(): { url: string; key: string } {
   const envUrl = env?.VITE_SUPABASE_URL || '';
   const envKey = env?.VITE_SUPABASE_ANON_KEY || '';
@@ -13,16 +44,10 @@ function getInitialConfig(): { url: string; key: string } {
   }
 
   // Fallback to local storage configuration if set by admin in the live app
-  if (typeof window !== 'undefined' && window.localStorage) {
-    try {
-      const savedUrl = localStorage.getItem('JOURJ_SUPABASE_URL');
-      const savedKey = localStorage.getItem('JOURJ_SUPABASE_ANON_KEY');
-      if (savedUrl && savedKey && savedUrl.startsWith('http')) {
-        return { url: savedUrl, key: savedKey };
-      }
-    } catch {
-      // ignore
-    }
+  const savedUrl = safeGetStorage('JOURJ_SUPABASE_URL');
+  const savedKey = safeGetStorage('JOURJ_SUPABASE_ANON_KEY');
+  if (savedUrl && savedKey && savedUrl.startsWith('http')) {
+    return { url: savedUrl, key: savedKey };
   }
 
   return { url: '', key: '' };
@@ -66,10 +91,8 @@ export function setSupabaseConfig(url: string, anonKey: string): boolean {
     activeConfig = { url: cleanUrl, key: cleanKey };
     isSupabaseConfigured = true;
 
-    if (typeof window !== 'undefined' && window.localStorage) {
-      localStorage.setItem('JOURJ_SUPABASE_URL', cleanUrl);
-      localStorage.setItem('JOURJ_SUPABASE_ANON_KEY', cleanKey);
-    }
+    safeSetStorage('JOURJ_SUPABASE_URL', cleanUrl);
+    safeSetStorage('JOURJ_SUPABASE_ANON_KEY', cleanKey);
 
     supabase = createClient(cleanUrl, cleanKey, {
       auth: {
@@ -93,10 +116,8 @@ export function setSupabaseConfig(url: string, anonKey: string): boolean {
 export function clearSupabaseConfig() {
   activeConfig = { url: '', key: '' };
   isSupabaseConfigured = false;
-  if (typeof window !== 'undefined' && window.localStorage) {
-    localStorage.removeItem('JOURJ_SUPABASE_URL');
-    localStorage.removeItem('JOURJ_SUPABASE_ANON_KEY');
-  }
+  safeRemoveStorage('JOURJ_SUPABASE_URL');
+  safeRemoveStorage('JOURJ_SUPABASE_ANON_KEY');
 }
 
 export async function testSupabaseConnection(): Promise<{ success: boolean; message: string; latencyMs?: number }> {

@@ -22,36 +22,36 @@ export const VisitorHome: React.FC<VisitorHomeProps> = ({
   return (
     <div className="w-full max-w-6xl mx-auto px-4 py-6 space-y-10">
       {/* Hero Section */}
-      <section className="relative rounded-3xl overflow-hidden border border-[#D7B45A]/30 bg-[#111111] shadow-2xl p-6 sm:p-10 text-center flex flex-col items-center justify-center min-h-[280px]">
+      <section className="relative rounded-3xl overflow-hidden border border-[#D7B45A]/30 bg-[#111111] shadow-2xl p-5 sm:p-10 text-center flex flex-col items-center justify-center min-h-[260px]">
         {/* Ambient glow */}
         <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 bg-[#D7B45A]/15 rounded-full blur-3xl pointer-events-none" />
         
         {/* Emblem */}
-        <div className="w-14 h-14 rounded-full border border-[#D7B45A]/50 bg-[#181818] flex items-center justify-center mb-4 shadow-lg shadow-[#D7B45A]/20">
-          <span className="text-xl text-[#D7B45A]">♛</span>
+        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border border-[#D7B45A]/50 bg-[#181818] flex items-center justify-center mb-3 sm:mb-4 shadow-lg shadow-[#D7B45A]/20">
+          <span className="text-lg sm:text-xl text-[#D7B45A]">♛</span>
         </div>
 
-        <div className="space-y-2 mb-6 max-w-xl">
-          <div className="text-[10px] sm:text-xs font-semibold tracking-[0.3em] uppercase text-[#D7B45A]">
+        <div className="space-y-2 mb-5 sm:mb-6 max-w-xl">
+          <div className="text-[9px] sm:text-xs font-semibold tracking-[0.2em] sm:tracking-[0.3em] uppercase text-[#D7B45A]">
             منصة تنظيم الأعراس والمناسبات الفاخرة · وهران
           </div>
           <h1 className="text-2xl sm:text-4xl font-serif text-[#F7F3EA] font-normal tracking-wide">
             JOUR <span className="text-[#D7B45A] font-semibold">J</span>
           </h1>
-          <p className="text-xs sm:text-sm text-[#A0A0A0] leading-relaxed max-w-md mx-auto">
+          <p className="text-xs sm:text-sm text-[#A0A0A0] leading-relaxed max-w-md mx-auto px-2">
             اختر نوع الخدمة التي تبحث عنها لاستعراض أفضل المؤسسات وقاعات الحفلات المعتمدة في وهران.
           </p>
         </div>
 
         {/* Categories Quick Circles Ribbon */}
-        <div className="w-full overflow-x-auto py-2 flex items-center justify-center gap-3 sm:gap-6 scrollbar-none">
+        <div className="w-full overflow-x-auto py-2 flex items-center justify-start sm:justify-center gap-3 sm:gap-6 px-2 scrollbar-none">
           {categories.map((cat) => (
             <button
               key={cat.id}
               onClick={() => onSelectCategory(cat.id)}
-              className="flex flex-col items-center gap-1.5 group cursor-pointer focus:outline-none min-w-[68px]"
+              className="flex flex-col items-center gap-1.5 group cursor-pointer focus:outline-none min-w-[64px] sm:min-w-[68px] shrink-0"
             >
-              <div className="w-13 h-13 sm:w-16 sm:h-16 rounded-full border border-[#333] group-hover:border-[#D7B45A] p-0.5 transition-all overflow-hidden bg-[#181818] shadow-md group-hover:scale-105">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full border border-[#333] group-hover:border-[#D7B45A] p-0.5 transition-all overflow-hidden bg-[#181818] shadow-md group-hover:scale-105">
                 <img
                   src={cat.image_url || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=300&q=80'}
                   alt={cat.name}
