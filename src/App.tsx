@@ -38,10 +38,10 @@ export default function App() {
   const loadInitialData = async () => {
     try {
       const [cats, bizs, links, profs] = await Promise.all([
-        api.getCategories(false),
-        api.adminGetBusinesses(),
-        api.adminGetRegistrationLinks(),
-        api.getProfiles()
+        api.getCategories(false).catch(() => []),
+        api.adminGetBusinesses().catch(() => []),
+        api.adminGetRegistrationLinks().catch(() => []),
+        api.getProfiles().catch(() => [])
       ]);
       setCategories(cats);
       setBusinesses(bizs);
