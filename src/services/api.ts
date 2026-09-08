@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { supabase, isSupabaseConfigured, testSupabaseConnection } from '../lib/supabase';
 import { 
   Category, 
   Business, 
@@ -523,6 +523,117 @@ class LocalStore {
 const localStore = new LocalStore();
 
 // ============================================================================
+// REAL-TIME SYNCHRONIZATION ENGINE (Supabase WebSockets + Cross-Tab Bus)
+// ============================================================================
+
+export interface RealtimePayload {
+  source: 'supabase' | 'broadcast' | 'storage';
+  table?: string;
+  action?: string;
+  data?: any;
+  timestamp?: number;
+}
+
+class RealtimeEngine {
+  private listeners: Set<(payload: RealtimePayload) => void> = new Set();
+  private broadcastChannel: BroadcastChannel | null = null;
+  private supabaseChannel: any = null;
+  private isSubscribedToSupabase = false;
+
+  constructor() {
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        this.broadcastChannel = new BroadcastChannel('jourj_realtime_bus');
+        this.broadcastChannel.onmessage = (event) => {
+          this.notifyListeners({ source: 'broadcast', ...event.data });
+        };
+      } catch (e) {
+        console.warn('BroadcastChannel not supported:', e);
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', (e: StorageEvent) => {
+        if (e.key && e.key.startsWith('jourj_')) {
+          this.notifyListeners({ source: 'storage', table: e.key });
+        }
+      });
+    }
+
+    this.initSupabaseRealtime();
+  }
+
+  public initSupabaseRealtime() {
+    if (this.isSubscribedToSupabase || !isSupabaseConfigured || !supabase) return;
+
+    try {
+      this.supabaseChannel = supabase
+        .channel('jourj_realtime_public')
+        .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+          console.log('⚡ [Supabase Realtime] postgres_changes:', payload);
+          this.notifyListeners({
+            source: 'supabase',
+            table: payload.table,
+            action: payload.eventType,
+            data: payload.new || payload.old,
+            timestamp: Date.now()
+          });
+        })
+        .subscribe((status) => {
+          console.log('⚡ [Supabase Realtime] Channel status:', status);
+        });
+
+      this.isSubscribedToSupabase = true;
+    } catch (err) {
+      console.warn('Error connecting to Supabase Realtime channel:', err);
+    }
+  }
+
+  public broadcast(table: string, action: string, data?: any) {
+    const payload: RealtimePayload = {
+      source: 'broadcast',
+      table,
+      action,
+      data,
+      timestamp: Date.now()
+    };
+
+    // 1. Broadcast to other tabs/windows
+    if (this.broadcastChannel) {
+      try {
+        this.broadcastChannel.postMessage(payload);
+      } catch {
+        // ignore
+      }
+    }
+
+    // 2. Broadcast to local components in current tab
+    this.notifyListeners(payload);
+  }
+
+  private notifyListeners(payload: RealtimePayload) {
+    this.listeners.forEach((listener) => {
+      try {
+        listener(payload);
+      } catch (err) {
+        console.error('Realtime listener error:', err);
+      }
+    });
+  }
+
+  public subscribe(callback: (payload: RealtimePayload) => void): () => void {
+    this.listeners.add(callback);
+    this.initSupabaseRealtime();
+
+    return () => {
+      this.listeners.delete(callback);
+    };
+  }
+}
+
+export const realtime = new RealtimeEngine();
+
+// ============================================================================
 // UNIFIED DATA SERVICE (Supabase with Robust Fallback)
 // ============================================================================
 
@@ -790,6 +901,11 @@ export const api = {
       }))
     );
 
+    // Broadcast Realtime Event
+    realtime.broadcast('businesses', 'create', newBusiness);
+    realtime.broadcast('profiles', 'create', newProfile);
+    realtime.broadcast('registration_links', 'update', { token: params.token, used: true });
+
     return {
       success: true,
       business: newBusiness,
@@ -810,7 +926,9 @@ export const api = {
         // fallback
       }
     }
-    return localStore.saveCategory(category);
+    const saved = localStore.saveCategory(category);
+    realtime.broadcast('categories', 'save', saved);
+    return saved;
   },
 
   async adminDeleteCategory(id: string): Promise<boolean> {
@@ -821,7 +939,9 @@ export const api = {
         // fallback
       }
     }
-    return localStore.deleteCategory(id);
+    const ok = localStore.deleteCategory(id);
+    realtime.broadcast('categories', 'delete', { id });
+    return ok;
   },
 
   async adminGetBusinesses(): Promise<Business[]> {
@@ -851,6 +971,7 @@ export const api = {
     if (biz) {
       biz.active = active;
       localStore.saveBusiness(biz);
+      realtime.broadcast('businesses', 'update', { id, active });
       return true;
     }
     return false;
@@ -891,6 +1012,7 @@ export const api = {
         // fallback
       }
     }
+    realtime.broadcast('registration_links', 'create', link);
     return link;
   },
 
@@ -957,6 +1079,7 @@ export const api = {
     }
 
     localStore.saveBusiness(updatedBusiness);
+    realtime.broadcast('businesses', 'update', updatedBusiness);
     return { success: true, business: updatedBusiness };
   },
 
@@ -977,7 +1100,9 @@ export const api = {
       }
     }
 
-    return localStore.setPortfolio(businessId, items);
+    const saved = localStore.setPortfolio(businessId, items);
+    realtime.broadcast('portfolio', 'update', { businessId, items });
+    return saved;
   },
 
   async ownerSaveAvailability(businessId: string, ownerId: string, list: Availability[]): Promise<Availability[]> {
@@ -997,11 +1122,58 @@ export const api = {
       }
     }
 
-    return localStore.setAvailability(businessId, list);
+    const saved = localStore.setAvailability(businessId, list);
+    realtime.broadcast('availability', 'update', { businessId, list });
+    return saved;
   },
 
   // 10. Simple Auth Helpers for Admin / Owner testing
   async getProfiles(): Promise<Profile[]> {
     return localStore.getProfiles();
+  },
+
+  // ============================================================================
+  // 11. REAL-TIME API SUBSCRIPTIONS & DATABASE MANAGEMENT
+  // ============================================================================
+  subscribeToRealtime(callback: (payload: RealtimePayload) => void): () => void {
+    return realtime.subscribe(callback);
+  },
+
+  broadcastChange(table: string, action: string, data?: any) {
+    realtime.broadcast(table, action, data);
+  },
+
+  async testRealtimeConnection() {
+    return testSupabaseConnection();
+  },
+
+  async syncSeedToSupabase(): Promise<{ success: boolean; message: string }> {
+    if (!isSupabaseConfigured) {
+      return { success: false, message: 'قاعدة بيانات Supabase غير مهيأة بعد.' };
+    }
+    try {
+      const cats = localStore.getCategories(false);
+      const bizs = localStore.getBusinesses(undefined, false);
+      const profs = localStore.getProfiles();
+      const links = localStore.getRegistrationLinks();
+
+      if (cats.length > 0) {
+        await supabase.from('categories').upsert(cats);
+      }
+      if (bizs.length > 0) {
+        await supabase.from('businesses').upsert(bizs);
+      }
+      if (profs.length > 0) {
+        await supabase.from('profiles').upsert(profs);
+      }
+      if (links.length > 0) {
+        await supabase.from('registration_links').upsert(links);
+      }
+
+      realtime.broadcast('all', 'sync', { count: bizs.length });
+      return { success: true, message: 'تمت مزامنة جميع البيانات بنجاح مع قاعدة البيانات السحابية الحقيقية!' };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'فشلت المزامنة مع Supabase' };
+    }
   }
 };

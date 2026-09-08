@@ -318,3 +318,15 @@ insert into public.registration_links (category_id, token, used, expires_at) val
   ('traiteur', 'TRAITEUR2026', false, timezone('utc'::text, now() + interval '30 days')),
   ('photographers', 'PHOTO2026', false, timezone('utc'::text, now() + interval '30 days'))
 on conflict (token) do nothing;
+
+-- =========================================================
+-- 6. ENABLE REAL-TIME REPLICATION FOR ALL TABLES
+-- Allows automatic WebSocket instant updates for all clients
+-- =========================================================
+alter publication supabase_realtime add table public.categories;
+alter publication supabase_realtime add table public.businesses;
+alter publication supabase_realtime add table public.portfolio;
+alter publication supabase_realtime add table public.availability;
+alter publication supabase_realtime add table public.registration_links;
+alter publication supabase_realtime add table public.profiles;
+

@@ -57,6 +57,12 @@ export default function App() {
   useEffect(() => {
     loadInitialData();
 
+    // Subscribe to real-time updates across the platform (Supabase Realtime + Cross-Tab sync)
+    const unsubscribe = api.subscribeToRealtime((payload) => {
+      console.log('⚡ Realtime event received in App:', payload);
+      loadInitialData();
+    });
+
     // Check URL parameters for ?token=...
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
@@ -64,6 +70,10 @@ export default function App() {
       setRegistrationToken(token);
       setCurrentView('register');
     }
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   // When a business is selected, load its dedicated portfolio and availability

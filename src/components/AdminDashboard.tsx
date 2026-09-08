@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { api } from '../services/api';
 import { Category, Business, RegistrationLink, Profile } from '../types';
+import { isSupabaseConfigured, setSupabaseConfig, clearSupabaseConfig } from '../lib/supabase';
 
 interface AdminDashboardProps {
   categories: Category[];
@@ -19,7 +20,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onRefreshData,
   onTestRegisterLink
 }) => {
-  const [activeTab, setActiveTab] = useState<'categories' | 'businesses' | 'links'>('links');
+  const [activeTab, setActiveTab] = useState<'categories' | 'businesses' | 'links' | 'database'>('links');
+
+  // Database Tab State
+  const [supabaseUrlInput, setSupabaseUrlInput] = useState(() => {
+    return (typeof window !== 'undefined' && localStorage.getItem('JOURJ_SUPABASE_URL')) || 
+           ((import.meta as any).env?.VITE_SUPABASE_URL || '');
+  });
+  const [supabaseKeyInput, setSupabaseKeyInput] = useState(() => {
+    return (typeof window !== 'undefined' && localStorage.getItem('JOURJ_SUPABASE_ANON_KEY')) || 
+           ((import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '');
+  });
+  const [dbTestResult, setDbTestResult] = useState<{ success: boolean; message: string; latencyMs?: number } | null>(null);
+  const [dbTesting, setDbTesting] = useState(false);
+  const [dbSyncing, setDbSyncing] = useState(false);
+  const [dbSyncResult, setDbSyncResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [dbConfigSaved, setDbConfigSaved] = useState(false);
 
   // Category modal / edit state
   const [editingCategory, setEditingCategory] = useState<Partial<Category> | null>(null);
@@ -81,6 +97,47 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     await onRefreshData();
   };
 
+  // 4. Database Actions
+  const handleTestConnection = async () => {
+    setDbTesting(true);
+    setDbTestResult(null);
+    const res = await api.testRealtimeConnection();
+    setDbTestResult(res);
+    setDbTesting(false);
+  };
+
+  const handleSaveDbConfig = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (setSupabaseConfig(supabaseUrlInput, supabaseKeyInput)) {
+      setDbConfigSaved(true);
+      setTimeout(() => setDbConfigSaved(false), 3000);
+      handleTestConnection();
+      onRefreshData();
+    } else {
+      alert('يرجى التأكد من كتابة رابط ومفتاح Supabase بشكل صحيح.');
+    }
+  };
+
+  const handleClearDbConfig = () => {
+    if (window.confirm('هل تريد إعادة تعيين إعدادات قاعدة البيانات؟')) {
+      clearSupabaseConfig();
+      setSupabaseUrlInput('');
+      setSupabaseKeyInput('');
+      setDbTestResult(null);
+      setDbSyncResult(null);
+      onRefreshData();
+    }
+  };
+
+  const handleSyncData = async () => {
+    setDbSyncing(true);
+    setDbSyncResult(null);
+    const res = await api.syncSeedToSupabase();
+    setDbSyncResult(res);
+    setDbSyncing(false);
+    await onRefreshData();
+  };
+
   const filteredBusinesses = businesses.filter(b => 
     businessCategoryFilter === 'all' ? true : b.category_id === businessCategoryFilter
   );
@@ -100,12 +157,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             إدارة منصة JOUR J
           </h1>
           <p className="text-xs text-[#999]">
-            التحكم في الأقسام (Categories)، والمؤسسات (Businesses)، وتوليد روابط التسجيل للملاك الجدد.
+            التحكم في الأقسام (Categories)، والمؤسسات (Businesses)، وقاعدة البيانات في الوقت الحقيقي (Real-Time).
           </p>
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex items-center gap-1 bg-[#111] p-1.5 rounded-2xl border border-[#2b2b2b]">
+        <div className="flex flex-wrap items-center gap-1 bg-[#111] p-1.5 rounded-2xl border border-[#2b2b2b]">
           <button
             onClick={() => setActiveTab('links')}
             className={`px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all ${
@@ -135,6 +192,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             }`}
           >
             الأقسام ({categories.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('database')}
+            className={`px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+              activeTab === 'database'
+                ? 'bg-[#D7B45A] text-[#111] shadow-md'
+                : 'text-[#aaa] hover:text-[#fff]'
+            }`}
+          >
+            <span>قاعدة البيانات</span>
+            <span className={`w-2 h-2 rounded-full ${isSupabaseConfigured ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
           </button>
         </div>
       </div>
@@ -460,6 +528,184 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: REAL-TIME DATABASE MANAGEMENT */}
+      {activeTab === 'database' && (
+        <div className="space-y-8 animate-fadeIn">
+          {/* Status & Live Diagnostics Card */}
+          <div className="rounded-3xl border border-[#D7B45A]/30 bg-[#141414] p-6 sm:p-8 space-y-6 shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#222] pb-6">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    محرك الوقت الحقيقي نشط (Real-Time Active)
+                  </span>
+                  <span className="text-xs text-[#888]">WebSockets & Cross-Device Bus</span>
+                </div>
+                <h2 className="text-xl font-bold text-[#F7F3EA] flex items-center gap-2">
+                  <span className="text-[#D7B45A]">⚡</span> حالة قاعدة البيانات والمزامنة اللحظية
+                </h2>
+                <p className="text-xs text-[#999]">
+                  تنعكس أي تعديلات فوراً بدون الحاجة لتحديث الصفحة لجميع الزوار وأصحاب الأقسام.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleTestConnection}
+                  disabled={dbTesting}
+                  className="px-4 py-2 rounded-xl bg-[#222] border border-[#444] text-xs font-bold text-[#E0E0E0] hover:bg-[#333] transition-all cursor-pointer disabled:opacity-50 flex items-center gap-2"
+                >
+                  <span>{dbTesting ? 'جارٍ الفحص...' : '⚡ فحص الاتصال اللحظي (Ping)'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSyncData}
+                  disabled={dbSyncing || !isSupabaseConfigured}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#F0D38A] to-[#D7B45A] text-[#111] text-xs font-bold shadow-md hover:brightness-110 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  <span>{dbSyncing ? 'جارٍ المزامنة...' : '⬆ رفع ومزامنة البيانات مع Supabase'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Test Result or Sync Notification */}
+            {dbTestResult && (
+              <div className={`p-4 rounded-2xl border text-xs flex items-center justify-between ${
+                dbTestResult.success 
+                  ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300' 
+                  : 'bg-amber-950/40 border-amber-500/40 text-amber-300'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <span>{dbTestResult.success ? '✓' : 'ℹ'}</span>
+                  <span className="font-medium">{dbTestResult.message}</span>
+                </div>
+                {dbTestResult.latencyMs !== undefined && (
+                  <span className="font-mono bg-black/40 px-2 py-0.5 rounded text-[11px]">
+                    الاستجابة: {dbTestResult.latencyMs}ms
+                  </span>
+                )}
+              </div>
+            )}
+
+            {dbSyncResult && (
+              <div className={`p-4 rounded-2xl border text-xs flex items-center gap-2 ${
+                dbSyncResult.success 
+                  ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300' 
+                  : 'bg-red-950/40 border-red-500/40 text-red-300'
+              }`}>
+                <span>{dbSyncResult.success ? '✓' : '⚠'}</span>
+                <span>{dbSyncResult.message}</span>
+              </div>
+            )}
+
+            {/* Database Metrics Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="p-4 rounded-2xl bg-[#0f0f0f] border border-[#262626] space-y-1">
+                <p className="text-[11px] text-[#888]">الأقسام (Categories)</p>
+                <p className="text-2xl font-serif font-bold text-[#D7B45A]">{categories.length}</p>
+                <p className="text-[10px] text-emerald-400">متزامنة بالكامل</p>
+              </div>
+              <div className="p-4 rounded-2xl bg-[#0f0f0f] border border-[#262626] space-y-1">
+                <p className="text-[11px] text-[#888]">المؤسسات (Businesses)</p>
+                <p className="text-2xl font-serif font-bold text-[#F7F3EA]">{businesses.length}</p>
+                <p className="text-[10px] text-emerald-400">تحديث تلقائي فوري</p>
+              </div>
+              <div className="p-4 rounded-2xl bg-[#0f0f0f] border border-[#262626] space-y-1">
+                <p className="text-[11px] text-[#888]">روابط التسجيل المشفرة</p>
+                <p className="text-2xl font-serif font-bold text-[#F7F3EA]">{registrationLinks.length}</p>
+                <p className="text-[10px] text-[#aaa]">محمية برموز فريدة</p>
+              </div>
+              <div className="p-4 rounded-2xl bg-[#0f0f0f] border border-[#262626] space-y-1">
+                <p className="text-[11px] text-[#888]">المستخدمون والملاك</p>
+                <p className="text-2xl font-serif font-bold text-[#F7F3EA]">{profiles.length}</p>
+                <p className="text-[10px] text-[#aaa]">صلاحيات معزولة</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Database Configuration Card */}
+          <div className="rounded-3xl border border-[#333] bg-[#141414] p-6 sm:p-8 space-y-6">
+            <div className="space-y-1 border-b border-[#222] pb-4">
+              <h3 className="text-base font-bold text-[#F7F3EA] flex items-center gap-2">
+                <span>🔑</span> مفاتيح الربط المباشر مع Supabase (Cloud Database)
+              </h3>
+              <p className="text-xs text-[#888]">
+                يمكنك إدخال مفاتيح مشروعك على Supabase هنا ليتم الربط والمزامنة السحابية فورياً بدون إعادة بناء الموقع.
+              </p>
+            </div>
+
+            <form onSubmit={handleSaveDbConfig} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-[#aaa] mb-1 font-medium">
+                    Project URL (رابط المشروع)
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://your-project.supabase.co"
+                    value={supabaseUrlInput}
+                    onChange={(e) => setSupabaseUrlInput(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#0e0e0e] border border-[#333] text-xs text-[#fff] font-mono focus:border-[#D7B45A] outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs text-[#aaa] mb-1 font-medium">
+                    Anon Key (المفتاح العام)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    value={supabaseKeyInput}
+                    onChange={(e) => setSupabaseKeyInput(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#0e0e0e] border border-[#333] text-xs text-[#fff] font-mono focus:border-[#D7B45A] outline-none"
+                  />
+                </div>
+              </div>
+
+              {dbConfigSaved && (
+                <div className="p-3 rounded-xl bg-emerald-950/50 border border-emerald-500/40 text-emerald-300 text-xs flex items-center gap-2">
+                  <span>✓</span>
+                  <span>تم حفظ إعدادات قاعدة البيانات بنجاح! يتم الآن توجيه الطلبات إلى Supabase.</span>
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 rounded-xl bg-[#D7B45A] text-[#111] font-bold text-xs hover:brightness-110 transition-all cursor-pointer"
+                >
+                  حفظ وتفعيل الاتصال فورياً
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleClearDbConfig}
+                  className="px-4 py-2 rounded-xl bg-[#222] text-[#aaa] text-xs hover:text-[#fff] hover:bg-[#2b2b2b] transition-all cursor-pointer"
+                >
+                  مسح واستخدام الوضع المدمج
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Quick Setup Guide */}
+          <div className="rounded-3xl border border-[#2a2a2a] bg-[#0e0e0e] p-6 space-y-3 text-xs text-[#999]">
+            <h4 className="font-bold text-[#F7F3EA] text-sm flex items-center gap-2">
+              <span className="text-[#D7B45A]">ℹ</span> كيف تفعل Realtime في Supabase؟
+            </h4>
+            <ol className="list-decimal list-inside space-y-1.5 leading-relaxed text-[#aaa]">
+              <li>افتح لوحة تحكم <strong>Supabase</strong> ثم انتقل إلى <strong>SQL Editor</strong>.</li>
+              <li>انسخ محتويات الملف <code className="bg-[#222] px-1.5 py-0.5 rounded text-[#D7B45A]">supabase/schema.sql</code> والصقها هناك.</li>
+              <li>اضغط على <strong>Run</strong> — سيتم إنشاء جميع الجداول وتفعيل <strong>Realtime Replication</strong> تلقائياً.</li>
+              <li>انسخ <code className="bg-[#222] px-1.5 py-0.5 rounded">Project URL</code> و <code className="bg-[#222] px-1.5 py-0.5 rounded">Anon Key</code> وضعها في النموذج أعلاه.</li>
+            </ol>
           </div>
         </div>
       )}

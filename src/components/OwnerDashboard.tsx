@@ -74,6 +74,17 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
 
   useEffect(() => {
     loadData();
+
+    // Subscribe to real-time events in Owner Dashboard
+    const unsubscribe = api.subscribeToRealtime((payload) => {
+      if (!payload.table || payload.table === 'businesses' || payload.table === 'portfolio' || payload.table === 'availability' || payload.table === 'all') {
+        loadData();
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, [currentUser.id]);
 
   // Handle Save Info (with Category Lock Enforcement!)
