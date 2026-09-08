@@ -26,7 +26,7 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <div className="w-10 h-10 rounded-full border border-[#D7B45A]/50 bg-[#161616] p-1 flex items-center justify-center overflow-hidden shadow-md shadow-[#D7B45A]/10 group-hover:border-[#D7B45A] transition-colors">
             <img
-              src="/assets/logo.jpg"
+              src={`${import.meta.env.BASE_URL}assets/logo.jpg`}
               alt="JOUR J"
               className="w-full h-full object-cover rounded-full"
               onError={(e) => {

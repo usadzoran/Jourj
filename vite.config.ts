@@ -3,9 +3,14 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
 
-export default defineConfig(() => {
+export default defineConfig(({ command }) => {
+  // Development server serves from root '/'
+  // Production builds target GitHub Pages repository 'Jourj': https://usadzoran.github.io/Jourj/
+  const isDev = command === 'serve';
+  const base = process.env.VITE_BASE || (isDev ? '/' : '/Jourj/');
+
   return {
-    base: './',
+    base,
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {

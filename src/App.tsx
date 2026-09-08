@@ -171,41 +171,77 @@ export default function App() {
             )}
 
             {/* VIEW 2: CATEGORY VIEW (Businesses inside this category) */}
-            {currentView === 'category' && activeCategory && (
-              <CategoryView
-                category={activeCategory}
-                allCategories={categories.filter(c => c.active)}
-                businesses={businesses}
-                onSelectCategory={handleSelectCategory}
-                onSelectBusiness={handleSelectBusiness}
-                onBackToHome={() => handleNavigate('home')}
-              />
+            {currentView === 'category' && (
+              activeCategory ? (
+                <CategoryView
+                  category={activeCategory}
+                  allCategories={categories.filter(c => c.active)}
+                  businesses={businesses}
+                  onSelectCategory={handleSelectCategory}
+                  onSelectBusiness={handleSelectBusiness}
+                  onBackToHome={() => handleNavigate('home')}
+                />
+              ) : (
+                <div className="w-full max-w-md mx-auto my-12 p-8 text-center bg-[#141414] rounded-2xl border border-[#2b2b2b] space-y-4">
+                  <p className="text-sm text-[#aaa]">لم يتم العثور على الفئة المطلوبة.</p>
+                  <button
+                    onClick={() => handleNavigate('home')}
+                    className="px-5 py-2.5 rounded-xl bg-[#D7B45A] text-[#111] font-bold text-xs cursor-pointer"
+                  >
+                    العودة للرئيسية
+                  </button>
+                </div>
+              )
             )}
 
             {/* VIEW 3: SINGLE BUSINESS DETAILS */}
-            {currentView === 'business' && activeBusiness && (
-              <BusinessDetailView
-                business={activeBusiness}
-                category={categories.find(c => c.id === activeBusiness.category_id) || null}
-                portfolio={businessPortfolio}
-                availability={businessAvailability}
-                onBackToCategory={() => {
-                  if (activeBusiness.category_id) {
-                    handleSelectCategory(activeBusiness.category_id);
-                  } else {
-                    handleNavigate('home');
-                  }
-                }}
-              />
+            {currentView === 'business' && (
+              activeBusiness ? (
+                <BusinessDetailView
+                  business={activeBusiness}
+                  category={categories.find(c => c.id === activeBusiness.category_id) || null}
+                  portfolio={businessPortfolio}
+                  availability={businessAvailability}
+                  onBackToCategory={() => {
+                    if (activeBusiness.category_id) {
+                      handleSelectCategory(activeBusiness.category_id);
+                    } else {
+                      handleNavigate('home');
+                    }
+                  }}
+                />
+              ) : (
+                <div className="w-full max-w-md mx-auto my-12 p-8 text-center bg-[#141414] rounded-2xl border border-[#2b2b2b] space-y-4">
+                  <p className="text-sm text-[#aaa]">لم يتم العثور على المؤسسة المطلوبة.</p>
+                  <button
+                    onClick={() => handleNavigate('home')}
+                    className="px-5 py-2.5 rounded-xl bg-[#D7B45A] text-[#111] font-bold text-xs cursor-pointer"
+                  >
+                    العودة للرئيسية
+                  </button>
+                </div>
+              )
             )}
 
             {/* VIEW 4: REGISTRATION VIEW VIA TOKEN */}
-            {currentView === 'register' && registrationToken && (
-              <RegistrationView
-                token={registrationToken}
-                onSuccess={handleRegistrationSuccess}
-                onCancel={() => handleNavigate('home')}
-              />
+            {currentView === 'register' && (
+              registrationToken ? (
+                <RegistrationView
+                  token={registrationToken}
+                  onSuccess={handleRegistrationSuccess}
+                  onCancel={() => handleNavigate('home')}
+                />
+              ) : (
+                <div className="w-full max-w-md mx-auto my-12 p-8 text-center bg-[#141414] rounded-2xl border border-[#2b2b2b] space-y-4">
+                  <p className="text-sm text-[#aaa]">يرجى إدخال رمز دعوة صالح للتسجيل.</p>
+                  <button
+                    onClick={() => setIsLoginModalOpen(true)}
+                    className="px-5 py-2.5 rounded-xl bg-[#D7B45A] text-[#111] font-bold text-xs cursor-pointer"
+                  >
+                    إدخال رمز الدعوة
+                  </button>
+                </div>
+              )
             )}
 
             {/* VIEW 5: ADMIN DASHBOARD */}
@@ -224,12 +260,24 @@ export default function App() {
             )}
 
             {/* VIEW 6: OWNER DASHBOARD */}
-            {currentView === 'owner' && currentUser && (
-              <OwnerDashboard
-                currentUser={currentUser}
-                onPreviewBusiness={(bizId) => handleSelectBusiness(bizId)}
-                onRefreshData={loadInitialData}
-              />
+            {currentView === 'owner' && (
+              currentUser ? (
+                <OwnerDashboard
+                  currentUser={currentUser}
+                  onPreviewBusiness={(bizId) => handleSelectBusiness(bizId)}
+                  onRefreshData={loadInitialData}
+                />
+              ) : (
+                <div className="w-full max-w-md mx-auto my-12 p-8 text-center bg-[#141414] rounded-2xl border border-[#2b2b2b] space-y-4">
+                  <p className="text-sm text-[#aaa]">يرجى تسجيل الدخول للوصول إلى لوحة المالك.</p>
+                  <button
+                    onClick={() => setIsLoginModalOpen(true)}
+                    className="px-5 py-2.5 rounded-xl bg-[#D7B45A] text-[#111] font-bold text-xs cursor-pointer"
+                  >
+                    تسجيل الدخول
+                  </button>
+                </div>
+              )
             )}
           </>
         )}

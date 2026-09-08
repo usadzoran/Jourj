@@ -337,8 +337,20 @@ class LocalStore {
 
   private load<T>(key: string, fallback: T): T {
     try {
-      const stored = localStorage.getItem(key);
-      if (stored) return JSON.parse(stored);
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const stored = localStorage.getItem(key);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          // If fallback is an array with items, ensure parsed is also a non-empty array
+          if (Array.isArray(fallback) && fallback.length > 0) {
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              return parsed as unknown as T;
+            }
+            return fallback;
+          }
+          if (parsed !== null && parsed !== undefined) return parsed;
+        }
+      }
     } catch {
       // ignore
     }

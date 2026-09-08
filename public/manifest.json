@@ -2,7 +2,7 @@
   "name": "jour j",
   "short_name": "jour j",
   "description": "Le moment qu'on attend - منصة جزائرية متخصصة في خدمات وأماكن الأعراس والمناسبات",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#121212",
   "theme_color": "#D4AD54",
