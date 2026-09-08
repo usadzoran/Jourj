@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured, testSupabaseConnection } from '../lib/supabase';
+import { supabase, isSupabaseConfigured, testSupabaseConnection, safeSupabaseQuery } from '../lib/supabase';
 import { 
   Category, 
   Business, 
@@ -646,12 +646,19 @@ export const api = {
         if (onlyActive) {
           query = query.eq('active', true);
         }
-        const { data, error } = await query.order('created_at', { ascending: true });
-        if (!error && data && data.length > 0) {
-          return data as Category[];
+        const { data: res, error: queryErr } = await safeSupabaseQuery(
+          query.order('created_at', { ascending: true }) as any,
+          3000,
+          'getCategories'
+        );
+        if (!queryErr && res) {
+          const { data, error } = res as any;
+          if (!error && Array.isArray(data) && data.length > 0) {
+            return data as Category[];
+          }
         }
-      } catch {
-        // fallback
+      } catch (err) {
+        console.error('❌ [JOUR J] getCategories exception:', err);
       }
     }
     return localStore.getCategories(onlyActive);
@@ -660,14 +667,17 @@ export const api = {
   async getCategoryById(id: string): Promise<Category | null> {
     if (isSupabaseConfigured) {
       try {
-        const { data, error } = await supabase
-          .from('categories')
-          .select('*')
-          .eq('id', id)
-          .single();
-        if (!error && data) return data as Category;
-      } catch {
-        // fallback
+        const { data: res, error: queryErr } = await safeSupabaseQuery(
+          supabase.from('categories').select('*').eq('id', id).single() as any,
+          3000,
+          'getCategoryById'
+        );
+        if (!queryErr && res) {
+          const { data, error } = res as any;
+          if (!error && data) return data as Category;
+        }
+      } catch (err) {
+        console.error('❌ [JOUR J] getCategoryById exception:', err);
       }
     }
     return localStore.getCategoryById(id) || null;
@@ -677,19 +687,23 @@ export const api = {
   async getBusinessesByCategory(categoryId: string, onlyActive = true): Promise<Business[]> {
     if (isSupabaseConfigured) {
       try {
-        let query = supabase
-          .from('businesses')
-          .select('*')
-          .eq('category_id', categoryId);
+        let query = supabase.from('businesses').select('*').eq('category_id', categoryId);
         if (onlyActive) {
           query = query.eq('active', true);
         }
-        const { data, error } = await query.order('rating', { ascending: false });
-        if (!error && data) {
-          return data as Business[];
+        const { data: res, error: queryErr } = await safeSupabaseQuery(
+          query.order('rating', { ascending: false }) as any,
+          3000,
+          'getBusinessesByCategory'
+        );
+        if (!queryErr && res) {
+          const { data, error } = res as any;
+          if (!error && Array.isArray(data) && data.length > 0) {
+            return data as Business[];
+          }
         }
-      } catch {
-        // fallback
+      } catch (err) {
+        console.error('❌ [JOUR J] getBusinessesByCategory exception:', err);
       }
     }
     return localStore.getBusinesses(categoryId, onlyActive);
@@ -699,14 +713,17 @@ export const api = {
   async getBusinessById(id: string): Promise<Business | null> {
     if (isSupabaseConfigured) {
       try {
-        const { data, error } = await supabase
-          .from('businesses')
-          .select('*')
-          .eq('id', id)
-          .single();
-        if (!error && data) return data as Business;
-      } catch {
-        // fallback
+        const { data: res, error: queryErr } = await safeSupabaseQuery(
+          supabase.from('businesses').select('*').eq('id', id).single() as any,
+          3000,
+          'getBusinessById'
+        );
+        if (!queryErr && res) {
+          const { data, error } = res as any;
+          if (!error && data) return data as Business;
+        }
+      } catch (err) {
+        console.error('❌ [JOUR J] getBusinessById exception:', err);
       }
     }
     return localStore.getBusinessById(id) || null;
@@ -716,14 +733,17 @@ export const api = {
   async getPortfolio(businessId: string): Promise<PortfolioItem[]> {
     if (isSupabaseConfigured) {
       try {
-        const { data, error } = await supabase
-          .from('portfolio')
-          .select('*')
-          .eq('business_id', businessId)
-          .order('sort_order', { ascending: true });
-        if (!error && data) return data as PortfolioItem[];
-      } catch {
-        // fallback
+        const { data: res, error: queryErr } = await safeSupabaseQuery(
+          supabase.from('portfolio').select('*').eq('business_id', businessId).order('sort_order', { ascending: true }) as any,
+          3000,
+          'getPortfolio'
+        );
+        if (!queryErr && res) {
+          const { data, error } = res as any;
+          if (!error && Array.isArray(data) && data.length > 0) return data as PortfolioItem[];
+        }
+      } catch (err) {
+        console.error('❌ [JOUR J] getPortfolio exception:', err);
       }
     }
     return localStore.getPortfolio(businessId);
@@ -733,13 +753,17 @@ export const api = {
   async getAvailability(businessId: string): Promise<Availability[]> {
     if (isSupabaseConfigured) {
       try {
-        const { data, error } = await supabase
-          .from('availability')
-          .select('*')
-          .eq('business_id', businessId);
-        if (!error && data && data.length > 0) return data as Availability[];
-      } catch {
-        // fallback
+        const { data: res, error: queryErr } = await safeSupabaseQuery(
+          supabase.from('availability').select('*').eq('business_id', businessId) as any,
+          3000,
+          'getAvailability'
+        );
+        if (!queryErr && res) {
+          const { data, error } = res as any;
+          if (!error && Array.isArray(data) && data.length > 0) return data as Availability[];
+        }
+      } catch (err) {
+        console.error('❌ [JOUR J] getAvailability exception:', err);
       }
     }
     return localStore.getAvailability(businessId);
@@ -761,27 +785,34 @@ export const api = {
     // Check Supabase first
     if (isSupabaseConfigured) {
       try {
-        const { data, error } = await supabase
-          .from('registration_links')
-          .select('*, categories(*)')
-          .eq('token', cleanToken)
-          .single();
+        const { data: res, error: queryErr } = await safeSupabaseQuery(
+          supabase
+            .from('registration_links')
+            .select('*, categories(*)')
+            .eq('token', cleanToken)
+            .single() as any,
+          3000,
+          'verifyRegistrationToken'
+        );
 
-        if (!error && data) {
-          if (data.used) {
-            return { valid: false, error: 'هذا الرابط تم استخدامه مسبقاً.' };
+        if (!queryErr && res) {
+          const { data, error } = res as any;
+          if (!error && data) {
+            if (data.used) {
+              return { valid: false, error: 'هذا الرابط تم استخدامه مسبقاً.' };
+            }
+            if (new Date(data.expires_at) < new Date()) {
+              return { valid: false, error: 'هذا الرابط منتهي الصلاحية.' };
+            }
+            return {
+              valid: true,
+              link: data as RegistrationLink,
+              category: data.categories as Category
+            };
           }
-          if (new Date(data.expires_at) < new Date()) {
-            return { valid: false, error: 'هذا الرابط منتهي الصلاحية.' };
-          }
-          return {
-            valid: true,
-            link: data as RegistrationLink,
-            category: data.categories as Category
-          };
         }
-      } catch {
-        // fallback
+      } catch (err) {
+        console.error('❌ [JOUR J] verifyRegistrationToken exception:', err);
       }
     }
 
@@ -947,13 +978,17 @@ export const api = {
   async adminGetBusinesses(): Promise<Business[]> {
     if (isSupabaseConfigured) {
       try {
-        const { data, error } = await supabase
-          .from('businesses')
-          .select('*')
-          .order('created_at', { ascending: false });
-        if (!error && data) return data as Business[];
-      } catch {
-        // fallback
+        const { data: res, error: queryErr } = await safeSupabaseQuery(
+          supabase.from('businesses').select('*').order('created_at', { ascending: false }) as any,
+          3000,
+          'adminGetBusinesses'
+        );
+        if (!queryErr && res) {
+          const { data, error } = res as any;
+          if (!error && Array.isArray(data) && data.length > 0) return data as Business[];
+        }
+      } catch (err) {
+        console.error('❌ [JOUR J] adminGetBusinesses exception:', err);
       }
     }
     return localStore.getBusinesses(undefined, false);
@@ -980,18 +1015,25 @@ export const api = {
   async adminGetRegistrationLinks(): Promise<RegistrationLink[]> {
     if (isSupabaseConfigured) {
       try {
-        const { data, error } = await supabase
-          .from('registration_links')
-          .select('*, categories(*)')
-          .order('created_at', { ascending: false });
-        if (!error && data) {
-          return data.map(item => ({
-            ...item,
-            category: item.categories as Category
-          })) as RegistrationLink[];
+        const { data: res, error: queryErr } = await safeSupabaseQuery(
+          supabase
+            .from('registration_links')
+            .select('*, categories(*)')
+            .order('created_at', { ascending: false }) as any,
+          3000,
+          'adminGetRegistrationLinks'
+        );
+        if (!queryErr && res) {
+          const { data, error } = res as any;
+          if (!error && Array.isArray(data) && data.length > 0) {
+            return data.map((item: any) => ({
+              ...item,
+              category: item.categories as Category
+            })) as RegistrationLink[];
+          }
         }
-      } catch {
-        // fallback
+      } catch (err) {
+        console.error('❌ [JOUR J] adminGetRegistrationLinks exception:', err);
       }
     }
     return localStore.getRegistrationLinks();
@@ -1022,14 +1064,21 @@ export const api = {
 
     if (isSupabaseConfigured) {
       try {
-        const { data, error } = await supabase
-          .from('businesses')
-          .select('*')
-          .eq('owner_id', ownerId)
-          .single();
-        if (!error && data) return data as Business;
-      } catch {
-        // fallback
+        const { data: res, error: queryErr } = await safeSupabaseQuery(
+          supabase
+            .from('businesses')
+            .select('*')
+            .eq('owner_id', ownerId)
+            .single() as any,
+          3000,
+          'ownerGetMyBusiness'
+        );
+        if (!queryErr && res) {
+          const { data, error } = res as any;
+          if (!error && data) return data as Business;
+        }
+      } catch (err) {
+        console.error('❌ [JOUR J] ownerGetMyBusiness exception:', err);
       }
     }
 

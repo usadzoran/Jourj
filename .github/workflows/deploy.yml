@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -43,6 +43,16 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
+
+      # Fallback: Also publish dist folder to gh-pages branch
+      # This guarantees the site works even if repository settings use "Deploy from a branch (gh-pages)"
+      - name: Deploy to gh-pages branch (Fallback)
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          keep_files: false
+          force_orphan: true
 
   deploy:
     environment:

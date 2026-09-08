@@ -38,17 +38,29 @@ export default function App() {
   const loadInitialData = async () => {
     try {
       const [cats, bizs, links, profs] = await Promise.all([
-        api.getCategories(false).catch(() => []),
-        api.adminGetBusinesses().catch(() => []),
-        api.adminGetRegistrationLinks().catch(() => []),
-        api.getProfiles().catch(() => [])
+        api.getCategories(false).catch((err) => {
+          console.error('❌ [JOUR J] Failed to load categories:', err);
+          return [];
+        }),
+        api.adminGetBusinesses().catch((err) => {
+          console.error('❌ [JOUR J] Failed to load businesses:', err);
+          return [];
+        }),
+        api.adminGetRegistrationLinks().catch((err) => {
+          console.error('❌ [JOUR J] Failed to load links:', err);
+          return [];
+        }),
+        api.getProfiles().catch((err) => {
+          console.error('❌ [JOUR J] Failed to load profiles:', err);
+          return [];
+        })
       ]);
       setCategories(cats);
       setBusinesses(bizs);
       setRegistrationLinks(links);
       setProfiles(profs);
     } catch (err) {
-      console.error('Error loading data:', err);
+      console.error('❌ [JOUR J] Error loading data in App:', err);
     } finally {
       setLoading(false);
     }
@@ -57,10 +69,10 @@ export default function App() {
   useEffect(() => {
     loadInitialData();
 
-    // Safety timeout: Ensure page content reveals within 1.2s even on slow or restricted networks
+    // Safety timeout: Ensure page content reveals within 1000ms even on slow or restricted networks
     const safetyTimer = setTimeout(() => {
       setLoading(false);
-    }, 1200);
+    }, 1000);
 
     // Subscribe to real-time updates across the platform (Supabase Realtime + Cross-Tab sync)
     const unsubscribe = api.subscribeToRealtime((payload) => {
@@ -91,8 +103,18 @@ export default function App() {
   // When a business is selected, load its dedicated portfolio and availability
   useEffect(() => {
     if (selectedBusinessId) {
-      api.getPortfolio(selectedBusinessId).then(setBusinessPortfolio);
-      api.getAvailability(selectedBusinessId).then(setBusinessAvailability);
+      api.getPortfolio(selectedBusinessId)
+        .then(setBusinessPortfolio)
+        .catch(err => {
+          console.error('❌ [JOUR J] Error loading business portfolio:', err);
+          setBusinessPortfolio([]);
+        });
+      api.getAvailability(selectedBusinessId)
+        .then(setBusinessAvailability)
+        .catch(err => {
+          console.error('❌ [JOUR J] Error loading business availability:', err);
+          setBusinessAvailability([]);
+        });
     }
   }, [selectedBusinessId]);
 

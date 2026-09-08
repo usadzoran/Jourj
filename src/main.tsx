@@ -38,6 +38,8 @@ const rootElement = document.getElementById('root') || (() => {
   return el;
 })();
 
+rootElement.setAttribute('data-mounted', 'true');
+
 createRoot(rootElement).render(
   <StrictMode>
     <ErrorBoundary>

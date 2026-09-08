@@ -62,13 +62,14 @@ export let isSupabaseConfigured = Boolean(
   !activeConfig.url.includes('placeholder')
 );
 
+// Only enable auth persistence/refresh if a real Supabase URL is provided
 export let supabase: SupabaseClient = createClient(
   activeConfig.url || 'https://placeholder.supabase.co',
   activeConfig.key || 'placeholder',
   {
     auth: {
-      persistSession: true,
-      autoRefreshToken: true,
+      persistSession: isSupabaseConfigured,
+      autoRefreshToken: isSupabaseConfigured,
     },
     realtime: {
       params: {
@@ -77,6 +78,38 @@ export let supabase: SupabaseClient = createClient(
     },
   }
 );
+
+/**
+ * Executes a Supabase query with a strict timeout (default 3 seconds).
+ * Prevents the application from hanging or remaining in a perpetual loading state
+ * if Supabase is unreachable, paused, or slow.
+ */
+export async function safeSupabaseQuery<T>(
+  queryPromise: Promise<T>,
+  timeoutMs = 3000,
+  operationName = 'Supabase Query'
+): Promise<{ data: T | null; error: Error | null }> {
+  if (!isSupabaseConfigured || !supabase) {
+    return { data: null, error: new Error('Supabase is not configured') };
+  }
+
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  try {
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        reject(new Error(`⏱️ [JOUR J] ${operationName} timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+    });
+
+    const result = await Promise.race([queryPromise, timeoutPromise]);
+    if (timer) clearTimeout(timer);
+    return { data: result, error: null };
+  } catch (err: any) {
+    if (timer) clearTimeout(timer);
+    console.warn(`⚠️ [JOUR J] ${operationName} failed/timed out. Falling back to local data.`, err?.message || err);
+    return { data: null, error: err instanceof Error ? err : new Error(String(err)) };
+  }
+}
 
 // Allow dynamically connecting/switching Supabase in real-time
 export function setSupabaseConfig(url: string, anonKey: string): boolean {
