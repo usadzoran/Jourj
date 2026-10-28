@@ -1,6 +1,8 @@
 -- Jour J: Replace direct invitation registration with moderated join requests.
 -- Safe and non-destructive: existing invitation, profile, business and data tables remain intact.
 
+create extension if not exists "uuid-ossp";
+
 create table if not exists public.join_requests (
   id uuid primary key default uuid_generate_v4(),
   category_id text not null references public.categories(id) on delete restrict,
