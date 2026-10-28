@@ -5,14 +5,14 @@ interface VisitorHomeProps {
   categories: Category[];
   businesses: Business[];
   onSelectCategory: (categoryId: string) => void;
-  onOpenTokenPrompt: () => void;
+  onOpenJoinRequest: () => void;
 }
 
 export const VisitorHome: React.FC<VisitorHomeProps> = ({
   categories,
   businesses,
   onSelectCategory,
-  onOpenTokenPrompt
+  onOpenJoinRequest
 }) => {
   // Count active businesses per category
   const getBusinessCount = (categoryId: string) => {
@@ -138,7 +138,7 @@ export const VisitorHome: React.FC<VisitorHomeProps> = ({
         )}
       </section>
 
-      {/* Quick Invite Registration Banner for Business Owners */}
+      {/* Public Join Request Banner for Business Owners */}
       <section className="rounded-2xl border border-[#2a2a2a] bg-gradient-to-r from-[#141414] via-[#1a1813] to-[#141414] p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-5">
         <div className="space-y-1 text-center sm:text-right">
           <div className="flex items-center justify-center sm:justify-start gap-2">
@@ -148,18 +148,18 @@ export const VisitorHome: React.FC<VisitorHomeProps> = ({
             <span className="text-xs text-[#D7B45A]">✦</span>
           </div>
           <h3 className="text-lg sm:text-xl font-bold text-[#F7F3EA]">
-            هل تملك رابط دعوة للتسجيل في منصة JOUR J؟
+            هل تملك مؤسسة أو تقدم خدمة للمناسبات؟
           </h3>
           <p className="text-xs text-[#888] max-w-md">
-            إذا أرسلت لك إدارة المنصة رمز أو رابط دعوة حصري، يمكنك تفعيله لتسجيل مؤسستك مباشرة في فئتها المحددة.
+            أرسل طلب انضمام مؤسستك إلى إدارة JOUR J. ستتم مراجعة الطلب قبل اعتماده ونشره.
           </p>
         </div>
 
         <button
-          onClick={onOpenTokenPrompt}
+          onClick={onOpenJoinRequest}
           className="whitespace-nowrap px-6 py-3 rounded-xl bg-[#1e1e1e] hover:bg-[#D7B45A] hover:text-[#111] text-[#D7B45A] border border-[#D7B45A]/40 font-bold text-xs tracking-wider transition-all shadow-md cursor-pointer"
         >
-          أدخل رمز الدعوة (Token)
+          انضم إلينا وأنشئ مؤسستك
         </button>
       </section>
     </div>

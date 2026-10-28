@@ -56,6 +56,30 @@ export interface RegistrationLink {
   category?: Category;
 }
 
+export type JoinRequestStatus = 'pending' | 'approved' | 'rejected';
+
+export interface JoinRequest {
+  id: string;
+  category_id: string;
+  business_name: string;
+  owner_name: string;
+  wilaya: string;
+  municipality: string;
+  address: string;
+  phone: string;
+  email: string | null;
+  description: string;
+  price_range: string | null;
+  image_urls: string[];
+  notes: string | null;
+  status: JoinRequestStatus;
+  rejection_reason: string | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  created_at: string;
+  category?: Category;
+}
+
 export interface Profile {
   id: string;
   full_name: string;

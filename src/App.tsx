@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from './services/api';
-import { Category, Business, RegistrationLink, Profile, PortfolioItem, Availability } from './types';
+import { Category, Business, RegistrationLink, Profile, PortfolioItem, Availability, JoinRequest } from './types';
 import { Header } from './components/Header';
 import { VisitorHome } from './components/VisitorHome';
 import { CategoryView } from './components/CategoryView';
@@ -17,13 +17,13 @@ export default function App() {
   const [currentView, setCurrentView] = useState<ViewType>('home');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
-  const [registrationToken, setRegistrationToken] = useState<string | null>(null);
 
   // Data states
   const [categories, setCategories] = useState<Category[]>([]);
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [registrationLinks, setRegistrationLinks] = useState<RegistrationLink[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Business detail specific data
@@ -37,7 +37,7 @@ export default function App() {
   // Refresh and load all data
   const loadInitialData = async () => {
     try {
-      const [cats, bizs, links, profs] = await Promise.all([
+      const [cats, bizs, links, profs, requests] = await Promise.all([
         api.getCategories(false).catch((err) => {
           console.error('❌ [JOUR J] Failed to load categories:', err);
           return [];
@@ -53,12 +53,17 @@ export default function App() {
         api.getProfiles().catch((err) => {
           console.error('❌ [JOUR J] Failed to load profiles:', err);
           return [];
+        }),
+        api.adminGetJoinRequests().catch((err) => {
+          console.error('❌ [JOUR J] Failed to load join requests:', err);
+          return [];
         })
       ]);
       setCategories(cats);
       setBusinesses(bizs);
       setRegistrationLinks(links);
       setProfiles(profs);
+      setJoinRequests(requests);
     } catch (err) {
       console.error('❌ [JOUR J] Error loading data in App:', err);
     } finally {
@@ -79,20 +84,6 @@ export default function App() {
       console.log('⚡ Realtime event received in App:', payload);
       loadInitialData();
     });
-
-    // Check URL parameters for ?token=...
-    try {
-      if (typeof window !== 'undefined' && window.location) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const token = urlParams.get('token');
-        if (token) {
-          setRegistrationToken(token);
-          setCurrentView('register');
-        }
-      }
-    } catch {
-      // ignore
-    }
 
     return () => {
       clearTimeout(safetyTimer);
@@ -138,7 +129,6 @@ export default function App() {
     } else if (view === 'owner') {
       setCurrentView('owner');
     } else if (view === 'register') {
-      if (param) setRegistrationToken(param);
       setCurrentView('register');
     }
   };
@@ -154,17 +144,6 @@ export default function App() {
     setSelectedBusinessId(businessId);
     setCurrentView('business');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleRegistrationSuccess = (profile: Profile, business: Business) => {
-    setCurrentUser(profile);
-    setSelectedBusinessId(business.id);
-    setSelectedCategoryId(business.category_id);
-    // Reload data so business appears everywhere
-    loadInitialData();
-    // Direct owner to their dedicated dashboard
-    setCurrentView('owner');
-    window.history.replaceState({}, '', window.location.pathname);
   };
 
   const handleLogout = () => {
@@ -210,7 +189,7 @@ export default function App() {
                 categories={categories.filter(c => c.active)}
                 businesses={businesses}
                 onSelectCategory={handleSelectCategory}
-                onOpenTokenPrompt={() => setIsLoginModalOpen(true)}
+                onOpenJoinRequest={() => handleNavigate('register')}
               />
             )}
 
@@ -267,25 +246,13 @@ export default function App() {
               )
             )}
 
-            {/* VIEW 4: REGISTRATION VIEW VIA TOKEN */}
+            {/* VIEW 4: PUBLIC JOIN REQUEST */}
             {currentView === 'register' && (
-              registrationToken ? (
-                <RegistrationView
-                  token={registrationToken}
-                  onSuccess={handleRegistrationSuccess}
-                  onCancel={() => handleNavigate('home')}
-                />
-              ) : (
-                <div className="w-full max-w-md mx-auto my-12 p-8 text-center bg-[#141414] rounded-2xl border border-[#2b2b2b] space-y-4">
-                  <p className="text-sm text-[#aaa]">يرجى إدخال رمز دعوة صالح للتسجيل.</p>
-                  <button
-                    onClick={() => setIsLoginModalOpen(true)}
-                    className="px-5 py-2.5 rounded-xl bg-[#D7B45A] text-[#111] font-bold text-xs cursor-pointer"
-                  >
-                    إدخال رمز الدعوة
-                  </button>
-                </div>
-              )
+              <RegistrationView
+                categories={categories.filter(c => c.active)}
+                onSubmitted={() => handleNavigate('home')}
+                onCancel={() => handleNavigate('home')}
+              />
             )}
 
             {/* VIEW 5: ADMIN DASHBOARD */}
@@ -294,12 +261,10 @@ export default function App() {
                 categories={categories}
                 businesses={businesses}
                 registrationLinks={registrationLinks}
+                joinRequests={joinRequests}
                 profiles={profiles}
                 onRefreshData={loadInitialData}
-                onTestRegisterLink={(token) => {
-                  setRegistrationToken(token);
-                  setCurrentView('register');
-                }}
+                onTestRegisterLink={() => handleNavigate('register')}
               />
             )}
 
@@ -358,9 +323,6 @@ export default function App() {
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
         profiles={profiles}
-        businesses={businesses}
-        categories={categories}
-        registrationLinks={registrationLinks}
         onSelectUser={(profile) => {
           setCurrentUser(profile);
           if (profile.role === 'admin') {
@@ -369,10 +331,7 @@ export default function App() {
             setCurrentView('owner');
           }
         }}
-        onEnterToken={(token) => {
-          setRegistrationToken(token);
-          setCurrentView('register');
-        }}
+        onEnterToken={() => handleNavigate('register')}
       />
     </div>
   );

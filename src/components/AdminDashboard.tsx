@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { api } from '../services/api';
-import { Category, Business, RegistrationLink, Profile } from '../types';
+import { Category, Business, RegistrationLink, Profile, JoinRequest } from '../types';
 import { isSupabaseConfigured, setSupabaseConfig, clearSupabaseConfig, safeGetStorage } from '../lib/supabase';
 
 interface AdminDashboardProps {
   categories: Category[];
   businesses: Business[];
   registrationLinks: RegistrationLink[];
+  joinRequests: JoinRequest[];
   profiles: Profile[];
   onRefreshData: () => Promise<void>;
   onTestRegisterLink: (token: string) => void;
@@ -16,11 +17,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   categories,
   businesses,
   registrationLinks,
+  joinRequests,
   profiles,
   onRefreshData,
   onTestRegisterLink
 }) => {
-  const [activeTab, setActiveTab] = useState<'categories' | 'businesses' | 'links' | 'database'>('links');
+  const [activeTab, setActiveTab] = useState<'categories' | 'businesses' | 'links' | 'requests' | 'database'>('requests');
 
   // Database Tab State
   const [supabaseUrlInput, setSupabaseUrlInput] = useState(() => {
@@ -49,6 +51,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   // Business filter
   const [businessCategoryFilter, setBusinessCategoryFilter] = useState<string>('all');
+  const [requestFilter, setRequestFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
+  const [requestSearch, setRequestSearch] = useState('');
+  const [reviewingRequest, setReviewingRequest] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+
+  const handleReviewRequest = async (request: JoinRequest, decision: 'approved' | 'rejected') => {
+    if (decision === 'rejected' && !rejectionReason.trim() && !window.confirm('رفض الطلب دون كتابة سبب؟')) return;
+    setReviewingRequest(request.id);
+    const result = await api.adminReviewJoinRequest(request.id, decision, 'admin-current', rejectionReason);
+    setReviewingRequest(null);
+    if (!result.success) window.alert(result.error || 'تعذر تحديث الطلب.');
+    else { setRejectionReason(''); await onRefreshData(); }
+  };
+
+  const visibleRequests = joinRequests.filter(request => {
+    const matchesStatus = requestFilter === 'all' || request.status === requestFilter;
+    const needle = requestSearch.trim().toLowerCase();
+    return matchesStatus && (!needle || [request.business_name, request.category?.name, request.wilaya].some(value => value?.toLowerCase().includes(needle)));
+  });
 
   // 1. Category Actions
   const handleSaveCategory = async (e: React.FormEvent) => {
@@ -164,6 +185,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         {/* Tab Switcher */}
         <div className="flex flex-wrap items-center gap-1 bg-[#111] p-1.5 rounded-2xl border border-[#2b2b2b]">
           <button
+            onClick={() => setActiveTab('requests')}
+            className={`px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'requests' ? 'bg-[#D7B45A] text-[#111] shadow-md' : 'text-[#aaa] hover:text-[#fff]'}`}
+          >
+            طلبات الانضمام ({joinRequests.filter(request => request.status === 'pending').length})
+          </button>
+          <button
             onClick={() => setActiveTab('links')}
             className={`px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all ${
               activeTab === 'links'
@@ -206,6 +233,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </button>
         </div>
       </div>
+
+      {activeTab === 'requests' && (
+        <div className="space-y-5">
+          <div className="rounded-3xl border border-[#D7B45A]/30 bg-[#141414] p-5 sm:p-7 space-y-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between"><div><h2 className="text-lg font-bold text-[#F7F3EA]">طلبات انضمام المؤسسات</h2><p className="text-xs text-[#888] mt-1">راجع البيانات قبل إنشاء المؤسسة ونشرها. الطلبات الجديدة لا تمنح أي صلاحية.</p></div><input value={requestSearch} onChange={event => setRequestSearch(event.target.value)} placeholder="بحث بالاسم أو القسم أو الولاية" className="w-full sm:w-72 px-3 py-2.5 rounded-xl bg-[#0e0e0e] border border-[#333] text-xs text-white outline-none focus:border-[#D7B45A]" /></div>
+            <div className="flex flex-wrap gap-2">{(['all','pending','approved','rejected'] as const).map(status => <button key={status} onClick={() => setRequestFilter(status)} className={`px-3 py-1.5 rounded-full text-[11px] border ${requestFilter === status ? 'bg-[#D7B45A] text-[#111] border-[#D7B45A]' : 'text-[#aaa] border-[#333]'}`}>{status === 'all' ? 'الكل' : status === 'pending' ? 'قيد المراجعة' : status === 'approved' ? 'مقبول' : 'مرفوض'}</button>)}</div>
+          </div>
+          <div className="space-y-4">{visibleRequests.length === 0 ? <div className="rounded-2xl border border-[#262626] bg-[#141414] p-8 text-center text-sm text-[#888]">لا توجد طلبات مطابقة.</div> : visibleRequests.map(request => <div key={request.id} className="rounded-3xl border border-[#262626] bg-[#141414] p-5 sm:p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3"><div><h3 className="text-base font-bold text-[#F7F3EA]">{request.business_name}</h3><p className="text-xs text-[#D7B45A] mt-1">{request.category?.name || request.category_id} · {request.wilaya}، {request.municipality}</p><p className="text-[11px] text-[#777] mt-1">أرسل في {new Date(request.created_at).toLocaleString('ar-DZ')}</p></div><span className="px-3 py-1 rounded-full text-[10px] font-bold border self-start text-[#fbbf24] border-[#fbbf24]/30 bg-[#fbbf24]/10">{request.status === 'pending' ? 'قيد المراجعة' : request.status === 'approved' ? 'مقبول' : 'مرفوض'}</span></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-[#bbb]"><p><strong className="text-[#888]">صاحب المؤسسة:</strong> {request.owner_name}</p><p><strong className="text-[#888]">الهاتف:</strong> {request.phone}</p><p><strong className="text-[#888]">البريد:</strong> {request.email || 'غير متوفر'}</p><p><strong className="text-[#888]">العنوان:</strong> {request.address}</p></div><p className="text-xs text-[#aaa] leading-relaxed bg-[#0e0e0e] rounded-xl p-3">{request.description}</p>
+            {request.image_urls.length > 0 && <div className="flex gap-2 overflow-x-auto">{request.image_urls.map(url => <a key={url} href={url} target="_blank" rel="noreferrer"><img src={url} alt="نموذج من الأعمال" className="w-20 h-20 object-cover rounded-xl border border-[#333]" /></a>)}</div>}
+            {request.status === 'pending' && <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-[#222]"><button disabled={reviewingRequest === request.id} onClick={() => handleReviewRequest(request, 'approved')} className="px-4 py-2 rounded-xl bg-[#10b981]/15 border border-[#10b981]/40 text-[#10b981] text-xs font-bold">قبول وإنشاء المؤسسة</button><input value={rejectionReason} onChange={event => setRejectionReason(event.target.value)} placeholder="سبب الرفض (اختياري)" className="flex-1 px-3 py-2 rounded-xl bg-[#0e0e0e] border border-[#333] text-xs text-white" /><button disabled={reviewingRequest === request.id} onClick={() => handleReviewRequest(request, 'rejected')} className="px-4 py-2 rounded-xl bg-[#ef4444]/15 border border-[#ef4444]/40 text-[#ef4444] text-xs font-bold">رفض الطلب</button></div>}
+            {request.status === 'rejected' && request.rejection_reason && <p className="text-xs text-[#ef9999]">سبب الرفض: {request.rejection_reason}</p>}
+          </div>)}</div>
+        </div>
+      )}
 
       {/* TAB 1: REGISTRATION LINKS (Category-Based!) */}
       {activeTab === 'links' && (

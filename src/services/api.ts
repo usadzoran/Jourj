@@ -6,7 +6,8 @@ import {
   Availability, 
   RegistrationLink, 
   Profile, 
-  DayOfWeek 
+  DayOfWeek,
+  JoinRequest
 } from '../types';
 
 // ============================================================================
@@ -325,6 +326,7 @@ class LocalStore {
   private availability: Availability[];
   private links: RegistrationLink[];
   private profiles: Profile[];
+  private joinRequests: JoinRequest[];
 
   constructor() {
     this.categories = this.load('jourj_categories', SEED_CATEGORIES);
@@ -333,6 +335,7 @@ class LocalStore {
     this.availability = this.load('jourj_availability', SEED_AVAILABILITY);
     this.links = this.load('jourj_links', SEED_REGISTRATION_LINKS);
     this.profiles = this.load('jourj_profiles', SEED_PROFILES);
+    this.joinRequests = this.load('jourj_join_requests', [] as JoinRequest[]);
   }
 
   private load<T>(key: string, fallback: T): T {
@@ -501,6 +504,18 @@ class LocalStore {
       this.links[idx].used = true;
       this.save('jourj_links', this.links);
     }
+  }
+
+  // Join requests
+  getJoinRequests(): JoinRequest[] {
+    return [...this.joinRequests].sort((a, b) => b.created_at.localeCompare(a.created_at));
+  }
+
+  saveJoinRequest(request: JoinRequest): JoinRequest {
+    const idx = this.joinRequests.findIndex(item => item.id === request.id);
+    if (idx >= 0) this.joinRequests[idx] = request; else this.joinRequests.push(request);
+    this.save('jourj_join_requests', this.joinRequests);
+    return request;
   }
 
   // Profiles
@@ -769,179 +784,71 @@ export const api = {
     return localStore.getAvailability(businessId);
   },
 
-  // 6. Token Verification for Registration
-  async verifyRegistrationToken(token: string): Promise<{
-    valid: boolean;
-    error?: string;
-    link?: RegistrationLink;
-    category?: Category;
-  }> {
-    if (!token || !token.trim()) {
-      return { valid: false, error: 'رابط التسجيل غير صالح.' };
+  // 6. Public join application (never creates an account or published business)
+  async submitJoinRequest(input: Omit<JoinRequest, 'id' | 'status' | 'rejection_reason' | 'reviewed_at' | 'reviewed_by' | 'created_at' | 'category'>): Promise<{ success: boolean; error?: string; request?: JoinRequest }> {
+    const category = await this.getCategoryById(input.category_id);
+    if (!category || !category.active) return { success: false, error: 'القسم المختار غير متاح حالياً.' };
+    if (!input.business_name.trim() || !input.owner_name.trim() || !input.phone.trim() || !input.description.trim()) {
+      return { success: false, error: 'يرجى إكمال البيانات الأساسية.' };
     }
-
-    const cleanToken = token.trim();
-
-    // Check Supabase first
-    if (isSupabaseConfigured) {
-      try {
-        const { data: res, error: queryErr } = await safeSupabaseQuery(
-          supabase
-            .from('registration_links')
-            .select('*, categories(*)')
-            .eq('token', cleanToken)
-            .single() as any,
-          3000,
-          'verifyRegistrationToken'
-        );
-
-        if (!queryErr && res) {
-          const { data, error } = res as any;
-          if (!error && data) {
-            if (data.used) {
-              return { valid: false, error: 'هذا الرابط تم استخدامه مسبقاً.' };
-            }
-            if (new Date(data.expires_at) < new Date()) {
-              return { valid: false, error: 'هذا الرابط منتهي الصلاحية.' };
-            }
-            return {
-              valid: true,
-              link: data as RegistrationLink,
-              category: data.categories as Category
-            };
-          }
-        }
-      } catch (err) {
-        console.error('❌ [JOUR J] verifyRegistrationToken exception:', err);
-      }
-    }
-
-    // Local Verification
-    const link = localStore.getRegistrationLinkByToken(cleanToken);
-    if (!link) {
-      return { valid: false, error: 'رابط التسجيل غير صالح.' };
-    }
-    if (link.used) {
-      return { valid: false, error: 'هذا الرابط تم استخدامه مسبقاً.' };
-    }
-    if (new Date(link.expires_at) < new Date()) {
-      return { valid: false, error: 'هذا الرابط منتهي الصلاحية.' };
-    }
-
-    const category = localStore.getCategoryById(link.category_id);
-    if (!category) {
-      return { valid: false, error: 'الفئة المرتبطة بهذا الرابط غير موجودة.' };
-    }
-
-    return {
-      valid: true,
-      link,
-      category
+    const request: JoinRequest = {
+      ...input, id: crypto.randomUUID ? crypto.randomUUID() : `request-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      status: 'pending', rejection_reason: null, reviewed_at: null, reviewed_by: null, created_at: new Date().toISOString(), category
     };
+    if (isSupabaseConfigured) {
+      const { category: _category, ...requestRow } = request;
+      const { error } = await supabase.from('join_requests').insert(requestRow);
+      if (error) return { success: false, error: 'تعذر حفظ الطلب في قاعدة البيانات.' };
+    }
+    localStore.saveJoinRequest(request);
+    realtime.broadcast('join_requests', 'create', request);
+    return { success: true, request };
   },
 
-  // 7. Owner Registration & Business Creation
-  // CRITICAL REQUIREMENT: category_id MUST come strictly from verified Registration Token!
-  async registerOwnerAndBusiness(params: {
-    token: string;
-    ownerName: string;
-    ownerEmail: string;
-    ownerPhone: string;
-    businessName: string;
-    businessTitle: string;
-    businessDescription: string;
-    businessPhone: string;
-    businessAddress: string;
-    businessLocation?: string;
-    businessPrice: number;
-    businessPriceUnit?: string;
-    businessMainImage: string;
-  }): Promise<{ success: boolean; error?: string; business?: Business; profile?: Profile }> {
-    // 1. Verify token
-    const tokenCheck = await this.verifyRegistrationToken(params.token);
-    if (!tokenCheck.valid || !tokenCheck.link || !tokenCheck.category) {
-      return { success: false, error: tokenCheck.error || 'رابط التسجيل غير صالح.' };
-    }
-
-    const enforcedCategoryId = tokenCheck.link.category_id;
-    const newOwnerId = 'owner-' + Math.random().toString(36).substring(2, 9);
-    const newBusinessId = 'biz-' + Math.random().toString(36).substring(2, 9);
-
-    const newProfile: Profile = {
-      id: newOwnerId,
-      full_name: params.ownerName.trim(),
-      phone: params.ownerPhone.trim(),
-      email: params.ownerEmail.trim().toLowerCase(),
-      role: 'owner',
-      created_at: new Date().toISOString()
-    };
-
-    const newBusiness: Business = {
-      id: newBusinessId,
-      category_id: enforcedCategoryId, // LOCKED: comes from verified token!
-      owner_id: newOwnerId,
-      name: params.businessName.trim(),
-      title: params.businessTitle.trim() || params.businessName.trim(),
-      description: params.businessDescription.trim() || null,
-      phone: params.businessPhone.trim() || params.ownerPhone.trim(),
-      email: params.ownerEmail.trim().toLowerCase(),
-      address: params.businessAddress.trim(),
-      location: params.businessLocation?.trim() || 'وهران، الجزائر',
-      price: Number(params.businessPrice) || 50000,
-      price_unit: params.businessPriceUnit || 'دج',
-      rating: 5.0,
-      main_image: params.businessMainImage.trim() || tokenCheck.category.image_url || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1200&q=80',
-      active: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-
-    // Save to Supabase if available
+  // 7. Admin review APIs
+  async adminGetJoinRequests(): Promise<JoinRequest[]> {
     if (isSupabaseConfigured) {
-      try {
-        await supabase.from('profiles').insert(newProfile);
-        await supabase.from('businesses').insert(newBusiness);
-        await supabase
-          .from('registration_links')
-          .update({ used: true })
-          .eq('token', params.token.trim());
-
-        // Default availability
-        const defaultAvail = DAYS.map(day => ({
-          business_id: newBusinessId,
-          day,
-          available: true
-        }));
-        await supabase.from('availability').insert(defaultAvail);
-      } catch {
-        // fallback
+      const { data, error } = await safeSupabaseQuery(
+        supabase.from('join_requests').select('*, categories(*)').order('created_at', { ascending: false }) as any, 3000, 'adminGetJoinRequests'
+      );
+      if (!error && data) {
+        const result = (data as any).data;
+        if (Array.isArray(result)) return result.map(item => ({ ...item, category: item.categories as any }));
       }
     }
+    return localStore.getJoinRequests();
+  },
 
-    // Save to local store
-    localStore.saveProfile(newProfile);
-    localStore.saveBusiness(newBusiness);
-    localStore.markLinkUsed(params.token);
-    localStore.setAvailability(
-      newBusinessId,
-      DAYS.map((day, i) => ({
-        id: `avail-${newBusinessId}-${i}`,
-        business_id: newBusinessId,
-        day,
-        available: true
-      }))
-    );
-
-    // Broadcast Realtime Event
-    realtime.broadcast('businesses', 'create', newBusiness);
-    realtime.broadcast('profiles', 'create', newProfile);
-    realtime.broadcast('registration_links', 'update', { token: params.token, used: true });
-
-    return {
-      success: true,
-      business: newBusiness,
-      profile: newProfile
-    };
+  async adminReviewJoinRequest(id: string, decision: 'approved' | 'rejected', reviewerId: string, rejectionReason?: string): Promise<{ success: boolean; error?: string; business?: Business; profile?: Profile }> {
+    const request = localStore.getJoinRequests().find(item => item.id === id);
+    const remoteRequest = request || (isSupabaseConfigured ? (await supabase.from('join_requests').select('*').eq('id', id).single()).data as JoinRequest : null);
+    if (!remoteRequest || remoteRequest.status !== 'pending') return { success: false, error: 'الطلب غير موجود أو تمت مراجعته مسبقاً.' };
+    if (decision === 'rejected') {
+      const patch = { status: 'rejected', rejection_reason: rejectionReason?.trim() || null, reviewed_at: new Date().toISOString(), reviewed_by: reviewerId };
+      if (isSupabaseConfigured) { const { error } = await supabase.from('join_requests').update(patch).eq('id', id).eq('status', 'pending'); if (error) return { success: false, error: error.message }; }
+      localStore.saveJoinRequest({ ...remoteRequest, ...patch } as JoinRequest);
+      realtime.broadcast('join_requests', 'update', patch);
+      return { success: true };
+    }
+    const newOwnerId = `owner-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const newBusinessId = `biz-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const profile: Profile = { id: newOwnerId, full_name: remoteRequest.owner_name, phone: remoteRequest.phone, email: remoteRequest.email || `${newOwnerId}@pending.jourj.local`, role: 'owner', created_at: new Date().toISOString() };
+    const business: Business = { id: newBusinessId, category_id: remoteRequest.category_id, owner_id: newOwnerId, name: remoteRequest.business_name, title: remoteRequest.business_name, description: remoteRequest.description || null, phone: remoteRequest.phone, email: remoteRequest.email, address: remoteRequest.address, location: `${remoteRequest.municipality}، ${remoteRequest.wilaya}`, price: Number((remoteRequest.price_range || '').replace(/[^0-9.]/g, '')) || 0, price_unit: 'دج', rating: 5, main_image: remoteRequest.image_urls[0] || remoteRequest.category?.image_url || '', active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+    const patch = { status: 'approved', reviewed_at: new Date().toISOString(), reviewed_by: reviewerId };
+    if (isSupabaseConfigured) {
+      const { error: profileError } = await supabase.from('profiles').insert(profile);
+      if (profileError) return { success: false, error: profileError.message };
+      const { error: businessError } = await supabase.from('businesses').insert(business);
+      if (businessError) return { success: false, error: businessError.message };
+      const { error: requestError } = await supabase.from('join_requests').update(patch).eq('id', id).eq('status', 'pending');
+      if (requestError) return { success: false, error: requestError.message };
+      await supabase.from('availability').insert(DAYS.map(day => ({ business_id: newBusinessId, day, available: true })));
+    }
+    localStore.saveProfile(profile); localStore.saveBusiness(business);
+    localStore.setAvailability(newBusinessId, DAYS.map((day, index) => ({ id: `avail-${newBusinessId}-${index}`, business_id: newBusinessId, day, available: true })));
+    localStore.saveJoinRequest({ ...remoteRequest, ...patch, category: remoteRequest.category } as JoinRequest);
+    realtime.broadcast('join_requests', 'update', patch); realtime.broadcast('businesses', 'create', business);
+    return { success: true, business, profile };
   },
 
   // 8. Admin APIs
